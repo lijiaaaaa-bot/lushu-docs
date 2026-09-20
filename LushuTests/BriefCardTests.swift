@@ -161,6 +161,14 @@ final class BriefCardTests: XCTestCase {
         XCTAssertFalse(seeded.currentDraft.chatPreviewSections.contains(where: { $0.heading.contains("清单") }))
         XCTAssertTrue(seeded.homeMessages.contains { $0.role == .user && !$0.attachmentIDs.isEmpty })
         XCTAssertFalse(seeded.homeMessages.contains { $0.role == .assistant && !$0.attachmentIDs.isEmpty })
+        let caption = HomeDownloadLabel.caption(for: seeded.currentDraft)
+        XCTAssertTrue(caption.hasPrefix("DOCX · "))
+        XCTAssertTrue(caption.contains(seeded.currentDraft.kind.title))
+        XCTAssertFalse(caption.contains("0.85"))
+        let sized = HomeDownloadLabel.caption(for: seeded.currentDraft, byteCount: 12_288)
+        XCTAssertTrue(sized.contains("DOCX"))
+        XCTAssertTrue(sized.contains(seeded.currentDraft.kind.title))
+        XCTAssertFalse(HomeDownloadLabel.caption(for: seeded.currentDraft, byteCount: 0).contains("Zero"))
     }
 
     func testRelatedQuestionsStayGrounded() {

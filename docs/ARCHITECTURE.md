@@ -54,7 +54,7 @@ CasePack/
 
 - 未挂案件：要点暂存在 `homeInbox`；回执要求「选材料文件夹」或「载入示例案件」。
 - 挂上 CasePack 后，inbox 并入该案。回执确认真表 / 已定位文本，并解析 `BriefCard`。
-- 材料 + 任务卡齐全后，「生成文书」本地落稿。首页在奶油纸色上展开稿面预览（跳过材料清单、不贴真表单元格）+ 紧凑「下载 .docx」，并给出 2–3 条「相关问题」。**不**自动抢进三栏。
+- 材料 + 任务卡齐全后，「生成文书」本地落稿。首页在奶油纸色上展开稿面预览（跳过材料清单、不贴真表单元格）+ 近全宽下载卡（`home.download`），并给出 2–3 条「相关问题」。**不**自动抢进三栏。
 - `DocumentGenerator.generate(kind:inputs:brief:)` 只填结构化材料。缺 电价P、全场灯数N、某年停车表 → 写缺口，不估数。
 - 可选 DeepSeek（BYOK）：钥匙串有密钥时，回执/润色走 OpenAI 兼容 `chat/completions`（`deepseek-chat`，思考链关闭）。无密钥时本地解析与落稿仍可用，提示去设置，不造假回复。
 - 不是通用闲聊：只服务材料总结 / 专项报告。起诉状 / 答辩状仍为禁用占位，本轮不发明第二套首页。
@@ -63,7 +63,7 @@ CasePack/
 
 ## UI 落点
 
-- **首页**：`HomeChatView`（左话题列表，右对话流）。材料卡片挂在**用户消息上方**；助手确认与落稿在纸面展开，不用助手下方 chip 条。AX：`home.topicList` / `home.sample` / `home.haitianChip` / `home.generate`。
+- **首页**：`HomeChatView`（左话题列表，右对话流）。材料卡片挂在**用户消息上方**；助手确认与落稿在纸面展开，不用助手下方 chip 条。AX：`home.topicList` / `home.sample` / `home.haitianChip` / `home.generate` / `home.download`。
 - **工作区**：三栏次级界面；任务卡详情、真表列、稿面全文
 - 工位条：导入 → 结构化（表）→ 文书 → 溯源检查
 

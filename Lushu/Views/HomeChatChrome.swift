@@ -132,7 +132,7 @@ struct HomeFileCard: View {
     }
 }
 
-/// 紧凑文字链：生成 / 下载，不用中段大号胡桃胶囊。
+/// 紧凑文字链：生成确认。下载改用宽文件卡，不用细字链。
 struct HomeTextLink: View {
     let title: String
     var identifier: String? = nil
@@ -145,6 +145,58 @@ struct HomeTextLink: View {
                 .foregroundStyle(Theme.walnut)
         }
         .buttonStyle(.plain)
+        .identified(identifier)
+    }
+}
+
+enum HomeDownloadLabel {
+    static func caption(for draft: DraftDocument, byteCount: Int? = nil) -> String {
+        var parts = ["DOCX", draft.kind.title]
+        if let byteCount, byteCount > 0 {
+            parts.append(ByteCountFormatter.string(fromByteCount: Int64(byteCount), countStyle: .file))
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// 落稿下载：近全宽圆角卡，整卡可点。案匣纸色，不是冷灰。
+struct HomeDownloadCard: View {
+    let draft: DraftDocument
+    var byteCount: Int? = nil
+    var identifier: String = "home.download"
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(draft.title)
+                        .font(Theme.screenTitle(15))
+                        .foregroundStyle(Theme.ink)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text(HomeDownloadLabel.caption(for: draft, byteCount: byteCount))
+                        .font(Theme.caption(12))
+                        .foregroundStyle(Theme.mute)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.mute)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+            .background(Theme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Theme.walnut.opacity(0.16), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("下载 \(draft.title)")
         .identified(identifier)
     }
 }

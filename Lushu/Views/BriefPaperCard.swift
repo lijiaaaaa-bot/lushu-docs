@@ -70,9 +70,9 @@ struct BriefPaperCard: View {
     }
 
     private func documentBlock(_ draft: DraftDocument) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HomeDocumentPage(draft: draft)
-            HomeTextLink(title: "下载 .docx") {
+            HomeDownloadCard(draft: draft, byteCount: knownDocxByteCount(for: draft)) {
                 appState.downloadGeneratedDocument()
             }
             if !message.followUps.isEmpty {
@@ -83,5 +83,15 @@ struct BriefPaperCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
+    }
+
+    private func knownDocxByteCount(for draft: DraftDocument) -> Int? {
+        guard let source = appState.selectedSource else { return nil }
+        let url = appState.packStore.draftDOCXURL(source.pack, draft: draft)
+        guard let values = try? url.resourceValues(forKeys: [.fileSizeKey]),
+              let size = values.fileSize, size > 0 else {
+            return nil
+        }
+        return size
     }
 }
