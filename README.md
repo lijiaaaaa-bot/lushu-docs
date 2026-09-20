@@ -124,7 +124,7 @@ bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIn
 
 1. Xcode 16+，打开 `Lushu.xcodeproj`。
 2. Scheme **Lushu**，目标 My Mac。
-3. Run。打开即见左话题列表 + 右聊天，不是单栏居中。点「示例」或 `home.haitianChip`，左侧选中「海天乙方电费+停车费」；右侧短气泡 + 材料列表。点「生成文书」只出现下载，不展开全文。
+3. Run。打开即见左话题 + 右聊天。点「示例」后右栏应是短气泡 + 气泡下附件 chip，中间没有「材料」表。生成后助手气泡带「下载」。
 
 快捷键：⌘1 导入 · ⌘2 结构化 · ⌘3 文书 · ⌘4 溯源 · ⌘O 案匣文件夹 · ⌘E 导出。
 
