@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<!--
+		iCloud / 案匣容器占位（界面先行轮不启用，避免无开发者团队时报错）：
+		com.apple.developer.icloud-container-identifiers
+		com.apple.developer.icloud-services = CloudDocuments
+		com.apple.developer.ubiquity-container-identifiers
+		接入时在 Signing & Capabilities 勾选 iCloud Documents，并填写容器 ID。
+	-->
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>

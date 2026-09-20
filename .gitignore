@@ -1,0 +1,24 @@
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Secrets — never commit API keys
+.env
+.env.*
+*.pem
+Secrets.plist
+**/Secrets.swift
