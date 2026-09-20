@@ -187,6 +187,17 @@ final class BriefCardTests: XCTestCase {
     }
 
     @MainActor
+    func testLoadSamplesAttachesFilesToExistingInboxUser() {
+        let state = AppState()
+        state.briefComposerText = SampleCaseLoader.embeddedExampleBrief
+        state.sendHomeMessage()
+        XCTAssertTrue(state.homeMessages.contains { $0.role == .user && $0.attachmentIDs.isEmpty })
+        state.loadSamples(enterWorkspace: false)
+        XCTAssertTrue(state.homeMessages.contains { $0.role == .user && !$0.attachmentIDs.isEmpty })
+        XCTAssertFalse(state.homeMessages.contains { $0.role == .assistant && !$0.attachmentIDs.isEmpty })
+    }
+
+    @MainActor
     func testRelatedQuestionKeepsBriefCard() {
         let seeded = AppState(seedHomeSample: true)
         seeded.generateFromHome()

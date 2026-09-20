@@ -102,8 +102,13 @@ struct HomeChatView: View {
 
     private func isLatestGenerateOffer(_ message: BriefChatMessage) -> Bool {
         guard message.action == .offerGenerate else { return false }
-        if appState.homeMessages.contains(where: { $0.action == .downloadDraft }) { return false }
-        return appState.homeMessages.last(where: { $0.action == .offerGenerate })?.id == message.id
+        guard appState.homeMessages.last(where: { $0.action == .offerGenerate })?.id == message.id else {
+            return false
+        }
+        guard let offerIndex = appState.homeMessages.firstIndex(where: { $0.id == message.id }) else {
+            return false
+        }
+        return !appState.homeMessages[offerIndex...].contains(where: { $0.action == .downloadDraft })
     }
 
     private var composerBar: some View {
@@ -142,7 +147,7 @@ struct HomeChatView: View {
                     .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
             )
 
-            if appState.canGenerateFromHome, !hasVisibleGenerateOffer {
+            if shouldShowComposerGenerate {
                 HomeTextLink(title: "生成文书", identifier: "home.generate") {
                     appState.generateFromHome()
                 }
@@ -161,6 +166,10 @@ struct HomeChatView: View {
 
     private var hasVisibleGenerateOffer: Bool {
         appState.homeMessages.contains(where: isLatestGenerateOffer)
+    }
+
+    private var shouldShowComposerGenerate: Bool {
+        appState.canGenerateFromHome && !hasVisibleGenerateOffer && !appState.hasGeneratedDraft
     }
 
     private var capsuleField: some View {
