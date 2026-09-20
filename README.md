@@ -53,11 +53,21 @@
 - `LegalCitation` 默认 hidden；溯源工位从 bundled 语料打开原文
 - `LegalCorpus` 加载 `Lushu/Resources/LegalKnowledge/`（法索 / LiJiaKit LegalKnowledge **2026.09.0** 子集：`2026.09.0-lushu-subset`，44 部、3788 条块）。范围：民法典各编 + 刑法及修正案 + 明确涉及民法典/刑法的司法解释。**查找失败即报错，不编造。** 完整法索包是后续事项。生成引用只能来自这些 JSON。
 
+## DeepSeek 自备密钥（BYOK）
+
+与**剧本工厂**相同：粘贴自己的 DeepSeek API Key，**只写入 macOS 钥匙串**。禁止提交到仓库、UserDefaults、`.env`。
+
+- 设置页：粘贴 / **保存到钥匙串** / **清除密钥**（中文文案）。首页标题旁也可打开设置。
+- 存储：`APIKeyStore`（service `bot.lijiaaaaa.lushu`，account `deepseek.apiKey`，`AfterFirstUnlockThisDeviceOnly`）。本仓库未包含 LiJiaKit KeychainKit；path 可用时替换为本实现。
+- 请求：`DeepSeekClient` → `https://api.deepseek.com/chat/completions`，模型 `deepseek-chat`，`thinking.type = disabled`，非流式。本仓库未包含 LLMKit；同模式薄封装。
+- **无密钥**：首页仍做确定性 `BriefCard` 解析与结构化本地落稿。模型回执 / 润色只提示打开设置，**不编造内容**。
+- **有密钥**：可选回执改写与稿面润色，只改已落地措辞。`GroundedLLM` 禁止编造法条、金额、电价 P、全场灯数 N。
+- 单元测试：`LushuTests/DeepSeekClientTests.swift`（请求体含思考链关闭，且不嵌入密钥）。
+
 ## 未接线（按钮可点，只说明）
 
 - 系统选档、security-scoped bookmark（引导页请选取 iCloud Drive「材料」）
 - PDF 正文解析（合同.pdf、审计件不入库，也不在本轮解析）
-- 大模型请求与钥匙串
 - NSSavePanel / 写回文件夹
 
 bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIntegrations.swift`。
@@ -77,7 +87,7 @@ bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIn
 
 ### 首页对话（豆包式用法，不是通用机器人）
 
-首页就是撰稿对话：贴长要点 → 选材料 / 载入示例 → 任务卡 → 生成文书。未挂案件时要点暂存在 inbox，挂上 CasePack 后并入该案。
+首页就是撰稿对话：贴长要点 → 选材料 / 载入示例 → 任务卡 → 生成文书。未挂案件时要点暂存在 inbox，挂上 CasePack 后并入该案。可选 DeepSeek 回执/润色见上文 BYOK；无密钥不编造模型回复。
 
 「载入示例案件」或 chip「海天乙方电费+停车费报告」写入 `example-brief.txt`。生成列出 2022–2026 真表，并写明缺 2018–2021 表、电价P、全场灯数N。不编法条、不估数。
 
@@ -117,4 +127,4 @@ bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIn
 
 沙盒、用户自选读写、app-scoped bookmarks 已开。iCloud Documents 未启用（避免无团队无法编译）。接入时在 Signing & Capabilities 勾选并填写与案匣约定的容器 ID。
 
-密钥只进钥匙串，禁止入库。
+DeepSeek 密钥只进钥匙串，禁止入库。见上文「DeepSeek 自备密钥（BYOK）」。

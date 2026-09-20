@@ -30,6 +30,8 @@ final class AppState: ObservableObject {
     @Published var previewMode: Bool = true
     @Published var lastStructureMessage: String?
     @Published var openedChunk: LegalChunk?
+    @Published var hasDeepSeekKey: Bool = false
+    @Published var maskedDeepSeekKey: String?
 
     /// 尚未挂上 CasePack 时，首页对话暂存在此。挂上案件后并入该案。
     static let homeInboxID = UUID(uuidString: "A0000000-0000-4000-8000-000000000001")!
@@ -103,6 +105,7 @@ final class AppState: ObservableObject {
         seedHomeSample: Bool = false
     ) {
         corpus = LegalCorpus.loadPreferred()
+        refreshDeepSeekKeyStatus()
         briefChats[Self.homeInboxID] = CaseBriefChat(caseID: Self.homeInboxID)
         if seedHomeSample {
             loadSamples(enterWorkspace: false)
@@ -337,14 +340,45 @@ final class AppState: ObservableObject {
         bindHiddenCitation(articleID: "刑法/第一条")
     }
 
+    func refreshDeepSeekKeyStatus() {
+        hasDeepSeekKey = APIKeyStore.hasDeepSeekKey()
+        maskedDeepSeekKey = APIKeyStore.maskedDeepSeekKey()
+    }
+
+    func saveDeepSeekKey(_ raw: String) throws {
+        try APIKeyStore.saveDeepSeekKey(raw)
+        refreshDeepSeekKeyStatus()
+        flash("DeepSeek 密钥已写入钥匙串。")
+    }
+
+    func clearDeepSeekKey() throws {
+        try APIKeyStore.clearDeepSeekKey()
+        refreshDeepSeekKeyStatus()
+        flash("已清除 DeepSeek 密钥。")
+    }
+
     func requestLLMPolish() {
-        guard let sourceID = selectedSourceID, var draft = drafts[sourceID], !draft.isBlank else {
+        guard let sourceID = selectedSourceID, let draft = drafts[sourceID], !draft.isBlank else {
             flash("没有已落稿的事实可润色。润色不得增补数字或未校验法条。")
             return
         }
-        drafts[sourceID] = generator.polishWording(draft)
-        flash("润色只改已落稿措辞，不得增补数字或未经 LegalCorpus.validate 的法条。本轮不接线。")
-        showSettings = true
+        refreshDeepSeekKeyStatus()
+        guard hasDeepSeekKey, let key = try? APIKeyStore.readDeepSeekKey(), !key.isEmpty else {
+            flash(GroundedLLM.missingKeyHint)
+            showSettings = true
+            return
+        }
+        isGenerating = true
+        Task {
+            do {
+                let text = try await DeepSeekClient().complete(messages: GroundedLLM.polishMessages(draft: draft), key: key)
+                applyPolishedMarkdown(text, to: sourceID)
+                flash("已用 DeepSeek 润色措辞。未增补数字或法条。")
+            } catch {
+                flash(error.localizedDescription)
+            }
+            isGenerating = false
+        }
     }
 
     func fillExampleBrief() {
@@ -393,6 +427,7 @@ final class AppState: ObservableObject {
         briefChats[Self.homeInboxID] = chat
         briefComposerText = ""
         flash("已记下要点。请挂上案件材料。")
+        offerOrRunLLMReply(caseID: Self.homeInboxID, card: chat.card, grounded: chat.messages.last?.text ?? "")
     }
 
     func updateBriefCard(revealWorkspace: Bool = false) {
@@ -420,6 +455,7 @@ final class AppState: ObservableObject {
             setWorkstation(.document)
         }
         flash("任务卡已更新。生成仍只吃结构化材料。")
+        offerOrRunLLMReply(caseID: source.id, card: chat.card, grounded: chat.messages.last?.text ?? "")
     }
 
     func generateFromBrief() {
@@ -439,6 +475,7 @@ final class AppState: ObservableObject {
         }
         do {
             try generateFromStructuredInputs()
+            maybePolishAfterGenerate()
             revealWorkspace()
         } catch let error as DocumentGenerationError {
             flash(error.localizedDescription)
@@ -557,13 +594,93 @@ final class AppState: ObservableObject {
     }
 
     private func appendHomeAssistant(_ text: String) {
-        let key = selectedSourceID ?? Self.homeInboxID
-        var chat = briefChats[key] ?? CaseBriefChat(caseID: key)
+        appendAssistant(text, to: selectedSourceID ?? Self.homeInboxID)
+    }
+
+    private func appendAssistant(_ text: String, to caseID: UUID) {
+        var chat = briefChats[caseID] ?? CaseBriefChat(caseID: caseID)
         chat.messages.append(BriefChatMessage(role: .assistant, text: text))
-        briefChats[key] = chat
-        if let source = selectedSource {
+        briefChats[caseID] = chat
+        if let source = sources.first(where: { $0.id == caseID }) {
             try? packStore.writeBriefChat(source.pack, chat: chat)
         }
+    }
+
+    private func offerOrRunLLMReply(caseID: UUID, card: BriefCard, grounded: String) {
+        refreshDeepSeekKeyStatus()
+        guard hasDeepSeekKey, let key = try? APIKeyStore.readDeepSeekKey(), !key.isEmpty else {
+            appendMissingKeyHintIfNeeded(to: caseID)
+            return
+        }
+        Task {
+            do {
+                let text = try await DeepSeekClient().complete(
+                    messages: GroundedLLM.replyMessages(card: card, grounded: grounded),
+                    key: key
+                )
+                appendAssistant(text, to: caseID)
+            } catch {
+                appendAssistant(error.localizedDescription, to: caseID)
+            }
+        }
+    }
+
+    private func maybePolishAfterGenerate() {
+        refreshDeepSeekKeyStatus()
+        if hasDeepSeekKey {
+            requestLLMPolish()
+        } else if let id = selectedSourceID {
+            appendMissingKeyHintIfNeeded(to: id)
+        }
+    }
+
+    private func appendMissingKeyHintIfNeeded(to caseID: UUID) {
+        let alreadyShown = briefChats[caseID]?.messages.contains {
+            $0.role == .assistant && $0.text == GroundedLLM.missingKeyHint
+        } == true
+        guard !alreadyShown else { return }
+        appendAssistant(GroundedLLM.missingKeyHint, to: caseID)
+    }
+
+    private func applyPolishedMarkdown(_ markdown: String, to sourceID: UUID) {
+        guard var draft = drafts[sourceID] else { return }
+        var changed = false
+        for index in draft.sections.indices {
+            let heading = draft.sections[index].heading
+            if let body = Self.extractMarkdownSection(heading, from: markdown), !body.isEmpty {
+                draft.sections[index].body = body
+                changed = true
+            }
+        }
+        guard changed else {
+            flash("DeepSeek 回文无法按原章节套回，未改本地稿。")
+            return
+        }
+        if !draft.generatorLabel.contains("DeepSeek") {
+            draft.generatorLabel += " · DeepSeek 措辞"
+        }
+        drafts[sourceID] = draft
+        if let source = sources.first(where: { $0.id == sourceID }) {
+            try? packStore.writeDraft(source.pack, draft: draft)
+        }
+    }
+
+    private static func extractMarkdownSection(_ heading: String, from markdown: String) -> String? {
+        let lines = markdown.components(separatedBy: .newlines)
+        var collecting = false
+        var body: [String] = []
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("#") {
+                let title = trimmed.replacingOccurrences(of: #"^#+\s*"#, with: "", options: .regularExpression)
+                if collecting { break }
+                collecting = title.contains(heading) || heading.contains(title)
+                continue
+            }
+            if collecting { body.append(line) }
+        }
+        let text = body.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
     }
 
     @discardableResult

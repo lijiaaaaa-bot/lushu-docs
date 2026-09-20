@@ -21,9 +21,11 @@ xcuserdata/
 **/*审计*.pdf
 Lushu/Resources/SampleCase/**/*.pdf
 
-# Secrets — never commit API keys
+# Secrets — never commit API keys / DeepSeek BYOK
 .env
 .env.*
 *.pem
 Secrets.plist
 **/Secrets.swift
+**/.deepseek*
+**/deepseek.key

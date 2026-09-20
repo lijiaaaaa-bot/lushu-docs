@@ -56,6 +56,7 @@ CasePack/
 - 挂上 CasePack 后，inbox 并入该案。回执确认真表 / 已定位文本，并解析 `BriefCard`。
 - 材料 + 任务卡齐全后，「生成文书」落稿并进入三栏工作区。
 - `DocumentGenerator.generate(kind:inputs:brief:)` 只填结构化材料。缺 电价P、全场灯数N、某年停车表 → 写缺口，不估数。
+- 可选 DeepSeek（BYOK）：钥匙串有密钥时，回执/润色走 OpenAI 兼容 `chat/completions`（`deepseek-chat`，思考链关闭）。无密钥时本地解析与落稿仍可用，提示去设置，不造假回复。
 - 不是通用闲聊：只服务材料总结 / 专项报告。起诉状 / 答辩状仍为禁用占位，本轮不发明第二套首页。
 
 示例子集预置 `example-brief.txt`。空态 chip「海天乙方电费+停车费报告」一键挂材料并写入要点。
@@ -73,4 +74,5 @@ P1：xlsx 真写（ZipWriter/OOXML）
 P2：文书生成强制读 structured/；引用必须经 bundled `LegalCorpus` 校验（子集已接入）  
 P3：隐式溯源 UI（稿面默认 hidden；溯源工位打开语料原文）  
 P4：案件绑定撰稿对话 + BriefCard + brief-driven 专项报告  
-P5：首页改为豆包式对话入口（HomeChatView），三栏工作区留给生成后
+P5：首页改为豆包式对话入口（HomeChatView），三栏工作区留给生成后  
+P6：DeepSeek BYOK（钥匙串 `APIKeyStore` + 设置粘贴/保存/清除 + 可选 `DeepSeekClient` 回执/润色；无密钥不造假）

@@ -43,6 +43,11 @@ struct CaseBriefChatView: View {
                 .font(Theme.serifBody(13))
                 .foregroundStyle(Theme.mute)
                 .lineLimit(2)
+            Text(appState.hasDeepSeekKey
+                 ? "DeepSeek 已保存。润色只改措辞。"
+                 : "无 DeepSeek 密钥。任务卡与本地落稿仍可用。")
+                .font(Theme.serifBody(12))
+                .foregroundStyle(Theme.mute)
         }
         .padding(.horizontal, Theme.pagePad)
         .padding(.top, 18)

@@ -48,7 +48,7 @@ struct LushuApp: App {
         Settings {
             SettingsSheet()
                 .environmentObject(appState)
-                .frame(width: 520, height: 460)
+                .frame(width: 520, height: 500)
         }
         #endif
     }

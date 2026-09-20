@@ -34,18 +34,29 @@ struct HomeChatView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("律书")
-                .font(Theme.brandTitle(48))
-                .foregroundStyle(Theme.ink)
+            HStack(alignment: .firstTextBaseline) {
+                Text("律书")
+                    .font(Theme.brandTitle(48))
+                    .foregroundStyle(Theme.ink)
+                Spacer(minLength: 12)
+                SerifTextButton(title: "设置") { appState.showSettings = true }
+            }
             Text("把长要点贴进来，挂上案件材料，再写成文书。")
                 .font(Theme.serifBody(16))
                 .foregroundStyle(Theme.mute)
+            Text(appState.hasDeepSeekKey
+                 ? "DeepSeek 已保存 \(appState.maskedDeepSeekKey ?? "密钥")。可选回执与润色走 chat/completions，思考链关闭。"
+                 : "未保存 DeepSeek 密钥。任务卡解析与本地落稿仍可用；模型回执与润色请到设置粘贴密钥，不会编造内容。")
+                .font(Theme.serifBody(13))
+                .foregroundStyle(Theme.mute)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, Theme.pagePad + 8)
         .padding(.top, 36)
         .padding(.bottom, 18)
         .frame(maxWidth: 760, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { appState.refreshDeepSeekKeyStatus() }
     }
 
     private var emptyState: some View {

@@ -12,9 +12,13 @@ enum PendingIntegrations {
         try OfficeDocument.extractText(from: url)
     }
 
-    static func readAPIKeyFromKeychain() -> String? { nil }
+    static func readAPIKeyFromKeychain() -> String? {
+        try? APIKeyStore.readDeepSeekKey()
+    }
 
-    static func writeAPIKeyToKeychain(_: String) {}
+    static func writeAPIKeyToKeychain(_ key: String) {
+        try? APIKeyStore.saveDeepSeekKey(key)
+    }
 
     static func saveDocument(filename _: String, contents _: String, writeBackToSource _: Bool) {}
 
