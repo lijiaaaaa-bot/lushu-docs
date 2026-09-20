@@ -46,7 +46,8 @@
 - `CasePack`：`raw/` · `structured/tables/*.xlsx` · `structured/texts/*.jsonl` · `citations/` · `drafts/`
 - 表结构化工位写出**真 Excel**（OOXML），不是碎行文本
 - `DocumentGenerator` 只接受 `StructuredCaseInputs`
-- `LegalCitation` 默认 hidden；`LegalCorpus` 包裹未来 LiJiaKit.LegalKnowledge，范围暂定民法 / 刑法及相关解释。**不编造条文**，校验失败则报错
+- `LegalCitation` 默认 hidden；溯源工位从 bundled 语料打开原文
+- `LegalCorpus` 加载 `Lushu/Resources/LegalKnowledge/`（法索 / LiJiaKit LegalKnowledge **2026.09.0** 子集：`2026.09.0-lushu-subset`，44 部、3788 条块）。范围：民法典各编 + 刑法及修正案 + 明确涉及民法典/刑法的司法解释。**查找失败即报错，不编造。** 完整法索包是后续事项。生成引用只能来自这些 JSON。
 
 ## 未接线（按钮可点，只说明）
 
@@ -56,6 +57,17 @@
 - NSSavePanel / 写回文件夹
 
 见 `Lushu/Services/PendingIntegrations.swift`。
+
+## 法条子集
+
+随应用打包（Xcode 同步 `Lushu/Resources/LegalKnowledge/`）：
+
+- `corpus_manifest.json`
+- `laws_meta.json`
+- `laws_chunks.json`（`id`, `law_id`, `law_title`, `category`, `article_num`, `heading`, `text`）
+- `legal_practice_terms.json` / `repealed_laws.json`
+
+父语料：法索 LiJiaKit LegalKnowledge `2026.09.0`。本包 `2026.09.0-lushu-subset`。文书生成不得引用包外条文。单元测试：`LushuTests/LegalCorpusTests.swift`（刑法/第一条、民法典总则/第一条与文件原文比对）。Canvas 预览「语料探测」。
 
 ## 定位与案匣关系
 

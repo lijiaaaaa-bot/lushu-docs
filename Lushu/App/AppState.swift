@@ -26,9 +26,10 @@ final class AppState: ObservableObject {
     @Published var isStructuring: Bool = false
     @Published var previewMode: Bool = true
     @Published var lastStructureMessage: String?
+    @Published var openedChunk: LegalChunk?
 
     let packStore = CasePackStore()
-    let corpus = LegalCorpus()
+    let corpus: LegalCorpus
     private var generator: DocumentGenerator { DocumentGenerator(corpus: corpus) }
 
     var selectedSource: CaseSource? {
@@ -70,6 +71,7 @@ final class AppState: ObservableObject {
         seedDrafts: Bool = false,
         seedFocus: WorkspaceFocus = .materials
     ) {
+        corpus = LegalCorpus.loadPreferred()
         if seedSamples {
             loadSamples()
         }
@@ -238,26 +240,38 @@ final class AppState: ObservableObject {
 
     func revealProvenance() {
         setWorkstation(.provenance)
-        if currentDraft.citations.isEmpty {
-            flash("本稿未绑定 LegalCitation。法索语料未接入前，不写入条文。")
+        if !corpus.isKnowledgeLinked {
+            flash("未找到 LegalKnowledge 子集。拒绝编造条文。")
+        } else if currentDraft.citations.isEmpty {
+            flash("本稿未绑定引用。可在溯源工位打开语料原文，默认不写进稿面。")
+        }
+    }
+
+    func openCorpusArticle(id: String) {
+        do {
+            openedChunk = try corpus.lookup(articleID: id)
+            setWorkstation(.provenance)
+        } catch {
+            openedChunk = nil
+            flash(error.localizedDescription)
+        }
+    }
+
+    func bindHiddenCitation(articleID: String) {
+        guard let sourceID = selectedSourceID, var draft = drafts[sourceID] else { return }
+        do {
+            let citation = try corpus.makeHiddenCitation(articleID: articleID)
+            try generator.bindCitation(citation, to: &draft)
+            drafts[sourceID] = draft
+            openedChunk = try corpus.lookup(articleID: articleID)
+            flash("已绑定隐藏引用 \(articleID)。稿面不展示，溯源可打开原文。")
+        } catch {
+            flash(error.localizedDescription)
         }
     }
 
     func tryAttachDemoCitation() {
-        let bogus = LegalCitation(
-            lawID: "prc.civil-code",
-            lawTitle: "中华人民共和国民法典",
-            articleNum: "0",
-            quote: "",
-            sourceSpan: SourceSpan(start: 0, end: 0, unit: .articleOffset)
-        )
-        guard let sourceID = selectedSourceID, var draft = drafts[sourceID] else { return }
-        do {
-            try generator.bindCitation(bogus, to: &draft)
-            drafts[sourceID] = draft
-        } catch {
-            flash(error.localizedDescription)
-        }
+        bindHiddenCitation(articleID: "刑法/第一条")
     }
 
     func requestLLMPolish() {

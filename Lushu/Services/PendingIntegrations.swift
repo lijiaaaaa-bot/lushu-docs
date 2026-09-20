@@ -16,6 +16,6 @@ enum PendingIntegrations {
 
     static func openWorkbookInSystem(_: URL) {}
 
-    /// 接入点：LiJiaKit path 产品 LegalKnowledge。未接线前 LegalCorpus 拒绝任何条文。
-    static func attachLegalKnowledgeKit() {}
+    /// 完整法索包接入点。子集已随 bundle 提供；此处留给全量 LegalKnowledge。
+    static func attachFullLegalKnowledgeKit() {}
 }

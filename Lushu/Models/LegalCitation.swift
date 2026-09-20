@@ -32,7 +32,8 @@ struct LegalCitation: Identifiable, Codable, Hashable {
     }
 
     var locatorLabel: String {
-        "\(lawTitle) 第\(articleNum)条"
+        let article = articleNum.contains("条") ? articleNum : "第\(articleNum)条"
+        return "\(lawTitle) \(article)"
     }
 }
 

@@ -2,7 +2,7 @@ import Foundation
 
 /// 文书生成只接受 StructuredCaseInputs。引用必须先过 LegalCorpus.validate。
 struct DocumentGenerator {
-    var corpus: LegalCorpus = LegalCorpus()
+    var corpus: LegalCorpus = .empty
 
     func generate(kind: DocumentKind, inputs: StructuredCaseInputs) throws -> DraftDocument {
         guard kind.isAvailable else {
@@ -50,7 +50,7 @@ struct DocumentGenerator {
             DraftSection(
                 id: UUID(),
                 heading: "案件概要",
-                body: "本稿仅根据结构化案件包整理材料轮廓，不引用法条。法条须经法索 LegalKnowledge 校验后才能写入。"
+                body: "本稿仅根据结构化案件包整理材料轮廓，不自动引用法条。引用必须是 LegalKnowledge 子集原文，并经 LegalCorpus.validate。"
             ),
             DraftSection(
                 id: UUID(),
@@ -80,7 +80,7 @@ struct DocumentGenerator {
                 body: """
                 - 表头确认并锁定后，再补行数据。
                 - 法条引用：lawID + articleNum 必须通过 LegalCorpus 校验。
-                - 接入 LiJiaKit.LegalKnowledge 之前，溯源面板保持空，不写条文。
+                - 溯源工位打开 bundled 子集原文；完整法索包是后续事项。
                 """
             )
         ]

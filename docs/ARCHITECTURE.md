@@ -35,14 +35,14 @@ CasePack/
 - output: .xlsx URL + schema 推断（列名、类型）
 - gate: 人工可改表头后再锁定，供文书工序使用
 
-## 法条包范围（暂定）
+## 法条包范围
 
-从法索 / LiJiaKit LegalKnowledge 子集打包进律书：
-- 民法典及相关司法解释（民事常用）
-- 刑法及相关司法解释（刑事常用）
-- 后续可扩：民事诉讼法、刑事诉讼法等（同一接口）
+从法索 / LiJiaKit LegalKnowledge **2026.09.0** 抽出子集，随应用打包：`Lushu/Resources/LegalKnowledge/`（`2026.09.0-lushu-subset`，44 部、3788 条块）。
 
-构建：依赖 `LiJiaKit` path 产品 `LegalKnowledge`；语料复制策略对齐 `fasuo-ios/scripts/gen_project.sh`（可先子集 manifest）。
+- 民法典各编（总则 / 物权 / 合同 / 人格权 / 婚姻家庭 / 继承 / 侵权责任 / 附则）及明确涉及民法典的司法解释
+- 刑法及修正案，以及明确涉及刑法的司法解释
+- `LegalCorpus` 按全文 `id`（如 `刑法/第一条`）与 `(law_id, article_num)` 建索引；`lookup` / `validate` 失败即报错，**不编造**
+- **生成引用只能来自这些 JSON。** 完整法索包是后续事项，同一接口再扩诉讼法等
 
 ## UI 落点（在现有三栏上）
 
@@ -52,7 +52,7 @@ CasePack/
 
 ## 实现分期
 
-P0：架构文档 + CasePack 目录约定 + LegalCitation 模型 + 空壳 TableJob/法条包接入点  
-P1：xlsx 真写（ZipWriter/OOXML 或成熟库）+ PDF 表初识（可先人工框选）  
-P2：文书生成强制读 structured/ + 引用必须经 LegalKnowledge 校验  
-P3：隐式溯源 UI（不打断阅读，可一键跳原文）
+P0：架构文档 + CasePack 目录约定 + LegalCitation 模型 + 工位条  
+P1：xlsx 真写（ZipWriter/OOXML）  
+P2：文书生成强制读 structured/；引用必须经 bundled `LegalCorpus` 校验（子集已接入）  
+P3：隐式溯源 UI（稿面默认 hidden；溯源工位打开语料原文）

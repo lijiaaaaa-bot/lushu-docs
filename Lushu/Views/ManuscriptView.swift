@@ -131,38 +131,70 @@ struct ManuscriptView: View {
                 Text("隐式溯源")
                     .font(Theme.brandTitle(28))
                     .foregroundStyle(Theme.ink)
-                Text("引用默认隐藏。打开本页可查看 lawID / 条号 / 摘录 / sourceSpan。未通过法索校验的条文不得写入。")
+                Text("引用默认隐藏。本页从 bundled LegalKnowledge 子集打开原文，查找失败则报错，不编造。")
                     .font(Theme.serifBody(14))
                     .foregroundStyle(Theme.mute)
 
+                HStack(spacing: 10) {
+                    SerifTextButton(title: "刑法第一条") {
+                        appState.openCorpusArticle(id: "刑法/第一条")
+                    }
+                    Text("·")
+                        .foregroundStyle(Theme.mute)
+                        .accessibilityHidden(true)
+                    SerifTextButton(title: "民法典总则第一条") {
+                        appState.openCorpusArticle(id: "总则/第一条")
+                    }
+                    Text("·")
+                        .foregroundStyle(Theme.mute)
+                        .accessibilityHidden(true)
+                    SerifTextButton(title: "绑定隐藏引用") {
+                        appState.bindHiddenCitation(articleID: "刑法/第一条")
+                    }
+                }
+
+                if let chunk = appState.openedChunk {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(chunk.lawTitle)
+                            .font(Theme.screenTitle(16))
+                            .foregroundStyle(Theme.walnut)
+                        Text("\(chunk.id) · \(chunk.heading)")
+                            .font(Theme.serifBody(12))
+                            .foregroundStyle(Theme.mute)
+                        Text(chunk.text)
+                            .font(Theme.serifBody(15))
+                            .foregroundStyle(Theme.ink)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .themeCard(emphasized: true)
+                }
+
                 if appState.currentDraft.citations.isEmpty {
-                    Text("本稿未绑定 LegalCitation。LiJiaKit.LegalKnowledge 未接入，语料为空，因此不展示任何法条原文。")
+                    Text("本稿未绑定 LegalCitation。生成器不会自动写条文；只有校验通过的隐藏引用可在此打开。")
                         .font(Theme.serifBody(15))
                         .foregroundStyle(Theme.ink)
                         .themeCard(outlined: true)
-                    SerifTextButton(title: "试写入一条未校验引用") {
-                        appState.tryAttachDemoCitation()
-                    }
                 } else {
                     ForEach(appState.currentDraft.citations) { citation in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(citation.locatorLabel)
-                                .font(Theme.screenTitle(16))
-                                .foregroundStyle(Theme.walnut)
-                            Text("lawID \(citation.lawID) · 展示 \(citation.display.rawValue)")
-                                .font(Theme.serifBody(12))
-                                .foregroundStyle(Theme.mute)
-                            if !citation.quote.isEmpty {
-                                Text(citation.quote)
-                                    .font(Theme.serifBody(14))
-                                    .foregroundStyle(Theme.ink)
+                        Button {
+                            appState.openCorpusArticle(id: "\(citation.lawID)/\(citation.articleNum)")
+                        } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(citation.locatorLabel)
+                                    .font(Theme.screenTitle(16))
+                                    .foregroundStyle(Theme.walnut)
+                                Text("lawID \(citation.lawID) · 展示 \(citation.display.rawValue)（稿面默认隐藏）")
+                                    .font(Theme.serifBody(12))
+                                    .foregroundStyle(Theme.mute)
+                                Text("sourceSpan \(citation.sourceSpan.start)–\(citation.sourceSpan.end)")
+                                    .font(Theme.caption(11))
+                                    .foregroundStyle(Theme.mute)
                             }
-                            Text("sourceSpan \(citation.sourceSpan.start)–\(citation.sourceSpan.end)")
-                                .font(Theme.caption(11))
-                                .foregroundStyle(Theme.mute)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .themeCard()
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .themeCard()
+                        .buttonStyle(.plain)
                     }
                 }
             }
