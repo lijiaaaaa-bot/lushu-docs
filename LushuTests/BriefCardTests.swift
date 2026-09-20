@@ -134,6 +134,8 @@ final class BriefCardTests: XCTestCase {
         XCTAssertTrue(seeded.homeTopics.contains { $0.title.contains("海天") })
         XCTAssertEqual(seeded.selectedTopicID, seeded.selectedSourceID)
         XCTAssertNotEqual(seeded.selectedTopicID, AppState.homeInboxID)
+        XCTAssertEqual(seeded.homeMessages.last(where: { $0.role == .assistant })?.action, .offerGenerate)
+        XCTAssertFalse(seeded.homeMessages.contains { $0.text.contains("材料清单") })
 
         seeded.startNewConversation()
         XCTAssertEqual(seeded.selectedTopicID, AppState.homeInboxID)

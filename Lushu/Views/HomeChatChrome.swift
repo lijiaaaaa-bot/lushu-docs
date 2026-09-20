@@ -70,6 +70,43 @@ struct HomeActionChip: View {
     }
 }
 
+enum HomeMaterialLabel {
+    static func short(_ filename: String) -> String {
+        if filename.contains("照明") || filename.contains("用电") {
+            return "照明测算"
+        }
+        if filename.contains("停车信息") || (filename.lowercased().hasSuffix(".xlsx") && filename.contains("停车")),
+           let year = BriefCardParser.year(in: filename) {
+            return "\(year)年停车表"
+        }
+        if filename.count <= 16 { return filename }
+        return String(filename.prefix(14)) + "…"
+    }
+}
+
+/// 助手气泡下的附件标签，横向换行，不像材料表。
+struct HomeAttachmentChip: View {
+    let title: String
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(Theme.caption(11))
+                .foregroundStyle(Theme.walnut)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Theme.card)
+                .clipShape(Capsule(style: .continuous))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 /// 空态示例提示：可点的圆角胶囊，可换行排布。
 struct HomePromptChip: View {
     let title: String

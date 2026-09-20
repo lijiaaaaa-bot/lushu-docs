@@ -76,6 +76,7 @@ enum BriefChatRole: String, Codable, Hashable {
 
 enum BriefChatAction: String, Codable, Hashable {
     case downloadDraft
+    case offerGenerate
 }
 
 struct BriefChatMessage: Identifiable, Hashable, Codable {

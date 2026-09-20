@@ -550,7 +550,13 @@ final class AppState: ObservableObject {
             chat.card = BriefCardParser.parse(sourceText, caseID: source.id, existing: chat.card)
         }
         let inputs = structuredInputs(for: source)
-        chat.messages.append(BriefChatMessage(role: .assistant, text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs)))
+        chat.messages.append(
+            BriefChatMessage(
+                role: .assistant,
+                text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs),
+                action: generateOfferAction(inputs: inputs)
+            )
+        )
         briefChats[source.id] = chat
         try? packStore.writeBriefChat(source.pack, chat: chat)
         if revealWorkspace {
@@ -639,7 +645,7 @@ final class AppState: ObservableObject {
         try? packStore.writeDraft(source.pack, draft: draft)
         if announceDownload {
             appendAssistant(
-                "已生成\(selectedKind.title) · 点此下载",
+                "已生成\(selectedKind.title)",
                 to: source.id,
                 action: .downloadDraft
             )
@@ -659,7 +665,11 @@ final class AppState: ObservableObject {
         chat.card = BriefCardParser.parse(text, caseID: source.id)
         chat.messages = [
             BriefChatMessage(role: .user, text: BriefCardParser.shortUserPreview(text, card: chat.card)),
-            BriefChatMessage(role: .assistant, text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs))
+            BriefChatMessage(
+                role: .assistant,
+                text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs),
+                action: generateOfferAction(inputs: inputs)
+            )
         ]
         briefChats[source.id] = chat
         try? packStore.writeBriefChat(source.pack, chat: chat)
@@ -683,7 +693,11 @@ final class AppState: ObservableObject {
                 return message
             }
             chat.messages.append(
-                BriefChatMessage(role: .assistant, text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs))
+                BriefChatMessage(
+                    role: .assistant,
+                    text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs),
+                    action: generateOfferAction(inputs: inputs)
+                )
             )
             briefChats[source.id] = chat
             briefChats[Self.homeInboxID] = CaseBriefChat(caseID: Self.homeInboxID)
@@ -692,6 +706,10 @@ final class AppState: ObservableObject {
         } else {
             seedExampleBrief(for: source)
         }
+    }
+
+    private func generateOfferAction(inputs: StructuredCaseInputs?) -> BriefChatAction? {
+        (inputs?.tables.isEmpty == false) ? .offerGenerate : nil
     }
 
     private func appendHomeAssistant(_ text: String) {

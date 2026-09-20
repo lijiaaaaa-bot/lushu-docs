@@ -56,13 +56,10 @@ struct HomeChatView: View {
                 emptyState
             } else {
                 ForEach(appState.homeMessages) { message in
-                    BriefPaperCard(message: message)
-                }
-                if !appState.homeMaterials.isEmpty {
-                    materialList(appState.homeMaterials)
-                }
-                if appState.canGenerateFromHome || appState.hasGeneratedDraft {
-                    actionPills
+                    BriefPaperCard(
+                        message: message,
+                        attachments: attachments(for: message)
+                    )
                 }
             }
         }
@@ -74,14 +71,13 @@ struct HomeChatView: View {
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("把要点贴进来，挂上材料，再生成下载。")
-                .font(Theme.serifBody(16))
+        VStack(spacing: 16) {
+            Text("今天写哪份文书？")
+                .font(Theme.screenTitle(22))
                 .foregroundStyle(Theme.ink)
-            Text("不编法条，不估台账数字。任务卡与报告正文在工作区。")
-                .font(Theme.serifBody(13))
+            Text("贴一句要点，或点下面的示例。")
+                .font(Theme.serifBody(14))
                 .foregroundStyle(Theme.mute)
-
             FlowRow(spacing: 8, lineSpacing: 8) {
                 HomePromptChip(title: "海天乙方电费+停车费报告", identifier: "home.haitianChip") {
                     appState.useHaitianPromptChip()
@@ -91,61 +87,19 @@ struct HomeChatView: View {
                 }
             }
         }
-        .padding(.top, 28)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 72)
+        .frame(maxWidth: .infinity)
     }
 
-    private func materialList(_ materials: [MaterialItem]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("材料")
-                .font(Theme.caption(11))
-                .foregroundStyle(Theme.mute)
-            ForEach(materials) { item in
-                Button {
-                    appState.revealWorkspace()
-                } label: {
-                    HStack(spacing: 8) {
-                        Text(shortMaterialName(item.filename))
-                            .font(Theme.serifBody(13))
-                            .foregroundStyle(Theme.ink)
-                            .lineLimit(1)
-                        Spacer(minLength: 8)
-                        Text(item.statusLabel)
-                            .font(Theme.caption(11))
-                            .foregroundStyle(Theme.walnut)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Theme.card)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Theme.walnut.opacity(0.18), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(maxWidth: 480, alignment: .leading)
+    private func attachments(for message: BriefChatMessage) -> [MaterialItem] {
+        guard message.role == .assistant else { return [] }
+        guard message.action == .offerGenerate || isLastAssistantAck(message) else { return [] }
+        return appState.homeMaterials
     }
 
-    private var actionPills: some View {
-        HStack(spacing: 8) {
-            if appState.canGenerateFromHome {
-                HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
-                    appState.generateFromHome()
-                }
-            }
-            if appState.hasGeneratedDraft {
-                HomePillButton(title: "下载", kind: .primary) {
-                    appState.downloadGeneratedDocument()
-                }
-            }
-            HomePillButton(title: "工作区", kind: .secondary) {
-                appState.revealWorkspace()
-            }
-            Spacer(minLength: 0)
-        }
+    private func isLastAssistantAck(_ message: BriefChatMessage) -> Bool {
+        appState.homeMessages.last(where: { $0.role == .assistant && $0.action != .downloadDraft })?.id == message.id
+            && !appState.homeMaterials.isEmpty
     }
 
     private var composerBar: some View {
@@ -184,18 +138,9 @@ struct HomeChatView: View {
                     .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
             )
 
-            if appState.canGenerateFromHome || appState.hasGeneratedDraft {
-                HStack(spacing: 8) {
-                    if appState.canGenerateFromHome {
-                        HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
-                            appState.generateFromHome()
-                        }
-                    }
-                    if appState.hasGeneratedDraft {
-                        HomePillButton(title: "下载", kind: .primary) {
-                            appState.downloadGeneratedDocument()
-                        }
-                    }
+            if appState.canGenerateFromHome {
+                HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
+                    appState.generateFromHome()
                 }
             }
         }
@@ -231,18 +176,6 @@ struct HomeChatView: View {
         }
     }
 
-    private func shortMaterialName(_ filename: String) -> String {
-        if filename.contains("照明") || filename.contains("用电") {
-            return "照明测算"
-        }
-        if filename.contains("停车信息") || filename.lowercased().hasSuffix(".xlsx"),
-           filename.contains("停车"),
-           let year = BriefCardParser.year(in: filename) {
-            return "\(year)年停车表"
-        }
-        if filename.count <= 16 { return filename }
-        return String(filename.prefix(14)) + "…"
-    }
 }
 
 #Preview("首页对话") {
