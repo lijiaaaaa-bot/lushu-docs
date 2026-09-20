@@ -83,7 +83,7 @@ struct ThemeBadge: View {
             .background(outlined ? Theme.paper : Theme.card)
             .overlay(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .stroke(Theme.walnutStroke, lineWidth: 1)
+                    .stroke(Theme.walnut.opacity(0.12), lineWidth: 1)
             )
     }
 }
