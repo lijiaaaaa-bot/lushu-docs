@@ -13,6 +13,7 @@ struct DraftDocument: Identifiable, Hashable, Codable {
     var sections: [DraftSection]
     var generatedAt: Date?
     var generatorLabel: String
+    var citations: [LegalCitation]
 
     var markdown: String {
         var lines: [String] = ["# \(title)", ""]
@@ -61,7 +62,8 @@ struct DraftDocument: Identifiable, Hashable, Codable {
                 DraftSection(id: UUID(), heading: "待办与缺口", body: "")
             ],
             generatedAt: nil,
-            generatorLabel: "尚未生成"
+            generatorLabel: "尚未生成",
+            citations: []
         )
     }
 }

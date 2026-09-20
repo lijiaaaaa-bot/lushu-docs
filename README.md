@@ -21,7 +21,7 @@
 | walnut | `#4A3426` (`0x4A3426`) | `#C4A484` (`0xC4A484`) |
 | brass | `#A6844A` (`0xA6844A`) | `#C9A86A` (`0xC9A86A`) |
 
-`corner` 14 continuous；`pagePad` 22。卡片：`Theme.card` 底 + `walnut.opacity(0.12)` 描边，强调用 brass。禁止系统蓝 CTA；底栏为衬线字「选材料 · 成文书 · 导出」。
+`corner` 14 continuous；`pagePad` 22。卡片：`Theme.card` 底 + `walnut.opacity(0.12)` 描边，强调用 brass。禁止系统蓝 CTA；底栏为衬线字「选材料 · 成文书 · 导出」。工位条：导入 → 结构化 → 文书 → 溯源。
 
 ### 三栏
 
@@ -38,6 +38,15 @@
 品牌 / 屏幕标题用 **Noto Serif SC** Black / Bold（与案匣相同）。完整 CJK 字重约十余 MB，未入库。
 
 将案匣工程中的 `NotoSerifSC-Black.otf`、`NotoSerifSC-Bold.otf` 拷入 `Lushu/Fonts/` 即可嵌入（`ATSApplicationFontsPath = Fonts`）。未放入时，`Theme.serif` 按 PostScript 名探测，回退宋体（Songti SC）或系统 serif，**不会改色板**。
+
+## 结构化案件包与法索
+
+见 `docs/ARCHITECTURE.md`。
+
+- `CasePack`：`raw/` · `structured/tables/*.xlsx` · `structured/texts/*.jsonl` · `citations/` · `drafts/`
+- 表结构化工位写出**真 Excel**（OOXML），不是碎行文本
+- `DocumentGenerator` 只接受 `StructuredCaseInputs`
+- `LegalCitation` 默认 hidden；`LegalCorpus` 包裹未来 LiJiaKit.LegalKnowledge，范围暂定民法 / 刑法及相关解释。**不编造条文**，校验失败则报错
 
 ## 未接线（按钮可点，只说明）
 
@@ -65,7 +74,7 @@
 2. Scheme **Lushu**，目标 My Mac。
 3. Run。引导页可「载入示例」看三栏。Canvas 预览：引导 / 工作区 / 稿纸。
 
-快捷键：⌘1 选材料 · ⌘2 成文书 · ⌘3 导出 · ⌘O 案匣文件夹 · ⌘E 导出。
+快捷键：⌘1 导入 · ⌘2 结构化 · ⌘3 文书 · ⌘4 溯源 · ⌘O 案匣文件夹 · ⌘E 导出。
 
 ## Entitlements / iCloud 占位
 

@@ -9,7 +9,7 @@ struct ManuscriptView: View {
             if appState.selectedSource == nil {
                 EmptyStateView(
                     title: "稿纸空着",
-                    detail: "选好材料后，点「成文书」生成本地摘要。无需 API Key。",
+                    detail: "先导入，再结构化真表。文书只吃 StructuredCaseInputs，不读原始 PDF 字节。",
                     actionTitle: "选材料"
                 ) {
                     appState.pickMaterials()
@@ -17,11 +17,13 @@ struct ManuscriptView: View {
             } else if appState.currentDraft.isBlank && !appState.isGenerating {
                 EmptyStateView(
                     title: appState.currentDraft.title,
-                    detail: "围绕已选材料生成清单、要点、时间线、争议与待办。大模型润色为可选项。",
+                    detail: "点工位「结构化」写出 .xlsx，再点「文书」。生成器不会编造法条。",
                     actionTitle: "成文书"
                 ) {
                     appState.composeDocument()
                 }
+            } else if appState.workstation == .provenance || appState.showHiddenCitations {
+                provenancePanel
             } else if appState.previewMode {
                 paperPreview
             } else {
@@ -48,6 +50,10 @@ struct ManuscriptView: View {
                 .foregroundStyle(Theme.mute)
                 .accessibilityHidden(true)
             SerifTextButton(title: "润色") { appState.requestLLMPolish() }
+            Text("·")
+                .foregroundStyle(Theme.mute)
+                .accessibilityHidden(true)
+            SerifTextButton(title: "溯源") { appState.revealProvenance() }
         }
         .padding(.horizontal, Theme.pagePad)
         .padding(.vertical, 12)
@@ -109,6 +115,54 @@ struct ManuscriptView: View {
                                 RoundedRectangle(cornerRadius: Theme.corner, style: .continuous)
                                     .stroke(Theme.walnut.opacity(0.12), lineWidth: 1)
                             )
+                    }
+                }
+            }
+            .padding(Theme.pagePad)
+            .frame(maxWidth: 680, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(Theme.paper)
+    }
+
+    private var provenancePanel: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("隐式溯源")
+                    .font(Theme.brandTitle(28))
+                    .foregroundStyle(Theme.ink)
+                Text("引用默认隐藏。打开本页可查看 lawID / 条号 / 摘录 / sourceSpan。未通过法索校验的条文不得写入。")
+                    .font(Theme.serifBody(14))
+                    .foregroundStyle(Theme.mute)
+
+                if appState.currentDraft.citations.isEmpty {
+                    Text("本稿未绑定 LegalCitation。LiJiaKit.LegalKnowledge 未接入，语料为空，因此不展示任何法条原文。")
+                        .font(Theme.serifBody(15))
+                        .foregroundStyle(Theme.ink)
+                        .themeCard(outlined: true)
+                    SerifTextButton(title: "试写入一条未校验引用") {
+                        appState.tryAttachDemoCitation()
+                    }
+                } else {
+                    ForEach(appState.currentDraft.citations) { citation in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(citation.locatorLabel)
+                                .font(Theme.screenTitle(16))
+                                .foregroundStyle(Theme.walnut)
+                            Text("lawID \(citation.lawID) · 展示 \(citation.display.rawValue)")
+                                .font(Theme.serifBody(12))
+                                .foregroundStyle(Theme.mute)
+                            if !citation.quote.isEmpty {
+                                Text(citation.quote)
+                                    .font(Theme.serifBody(14))
+                                    .foregroundStyle(Theme.ink)
+                            }
+                            Text("sourceSpan \(citation.sourceSpan.start)–\(citation.sourceSpan.end)")
+                                .font(Theme.caption(11))
+                                .foregroundStyle(Theme.mute)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .themeCard()
                     }
                 }
             }

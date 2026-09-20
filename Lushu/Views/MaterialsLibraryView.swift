@@ -9,8 +9,8 @@ struct MaterialsLibraryView: View {
             if appState.selectedSource == nil {
                 EmptyStateView(
                     title: "尚未选材料",
-                    detail: "从左侧接入案匣文件夹，或导入文件。材料以抽屉卡片列出，不用系统列表框。",
-                    actionTitle: "选材料"
+                    detail: "工位从导入开始。原始件进 raw/，表结构化工位产出 structured/tables 下的真 .xlsx。",
+                    actionTitle: "导入"
                 ) {
                     appState.pickMaterials()
                     appState.showOnboarding = true
@@ -29,23 +29,19 @@ struct MaterialsLibraryView: View {
                         if !appState.unfiledMaterials.isEmpty {
                             sectionLabel("未归")
                             ForEach(appState.unfiledMaterials) { item in
-                                MaterialDrawerCard(
-                                    item: item,
-                                    outlined: true,
-                                    selected: item.id == appState.selectedMaterialID
-                                )
-                                .onTapGesture { appState.selectedMaterialID = item.id }
+                                materialCard(item, outlined: true)
                             }
                         }
-                        if !appState.filedMaterials.isEmpty {
-                            sectionLabel("材料")
-                            ForEach(appState.filedMaterials) { item in
-                                MaterialDrawerCard(
-                                    item: item,
-                                    outlined: false,
-                                    selected: item.id == appState.selectedMaterialID
-                                )
-                                .onTapGesture { appState.selectedMaterialID = item.id }
+                        if !appState.rawMaterials.isEmpty {
+                            sectionLabel("原始")
+                            ForEach(appState.rawMaterials) { item in
+                                materialCard(item, outlined: item.tableStatus == .pendingStructure)
+                            }
+                        }
+                        if !appState.structuredMaterials.isEmpty {
+                            sectionLabel("已结构化")
+                            ForEach(appState.structuredMaterials) { item in
+                                materialCard(item, outlined: false)
                             }
                         }
                     }
@@ -81,12 +77,24 @@ struct MaterialsLibraryView: View {
             .foregroundStyle(Theme.mute)
             .tracking(0.6)
     }
+
+    private func materialCard(_ item: MaterialItem, outlined: Bool) -> some View {
+        MaterialDrawerCard(
+            item: item,
+            outlined: outlined,
+            selected: item.id == appState.selectedMaterialID
+        ) {
+            appState.openStructuredWorkbook(item)
+        }
+        .onTapGesture { appState.selectedMaterialID = item.id }
+    }
 }
 
 struct MaterialDrawerCard: View {
     let item: MaterialItem
     var outlined: Bool
     var selected: Bool
+    var onOpenWorkbook: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -96,15 +104,27 @@ struct MaterialDrawerCard: View {
                     .foregroundStyle(Theme.ink)
                     .lineLimit(2)
                 Spacer(minLength: 8)
-                ThemeBadge(text: outlined ? "未归" : item.kind.displayName, outlined: outlined)
+                ThemeBadge(text: item.statusLabel, outlined: item.tableStatus == .pendingStructure)
             }
             HStack(spacing: 8) {
-                Text(item.formattedSize)
+                Text(item.kind.displayName)
                 Text("·")
-                Text(item.statusLabel)
+                Text(item.formattedSize)
+                if item.layer == .structured {
+                    Text("·")
+                    Text(item.relativePath)
+                }
             }
             .font(Theme.serifBody(12))
             .foregroundStyle(Theme.mute)
+
+            if item.tableStatus == .realWorkbook {
+                SerifTextButton(title: "打开 Excel") { onOpenWorkbook() }
+            } else if item.tableStatus == .pendingStructure {
+                Text("待写入 structured/tables 真表，不用碎文本预览。")
+                    .font(Theme.serifBody(12))
+                    .foregroundStyle(Theme.mute)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .themeCard(emphasized: selected, outlined: outlined)

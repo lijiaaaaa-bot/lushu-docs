@@ -4,17 +4,21 @@ struct WorkspaceView: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        NavigationSplitView {
-            SidebarView()
-                .navigationSplitViewColumnWidth(min: 248, ideal: Theme.sidebarIdeal, max: 340)
-        } content: {
-            MaterialsLibraryView()
-                .navigationSplitViewColumnWidth(min: 300, ideal: Theme.materialsIdeal, max: 480)
-        } detail: {
-            ManuscriptView()
+        VStack(spacing: 0) {
+            WorkstationStrip()
+            NavigationSplitView {
+                SidebarView()
+                    .navigationSplitViewColumnWidth(min: 248, ideal: Theme.sidebarIdeal, max: 340)
+            } content: {
+                MaterialsLibraryView()
+                    .navigationSplitViewColumnWidth(min: 300, ideal: Theme.materialsIdeal, max: 480)
+            } detail: {
+                ManuscriptView()
+            }
+            .navigationSplitViewStyle(.balanced)
+            .tint(Theme.walnut)
+            .background(Theme.paper)
         }
-        .navigationSplitViewStyle(.balanced)
-        .tint(Theme.walnut)
         .background(Theme.paper)
     }
 }

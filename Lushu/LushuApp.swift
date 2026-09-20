@@ -23,12 +23,14 @@ struct LushuApp: App {
                     .disabled(appState.currentDraft.isBlank)
             }
             CommandMenu("律书") {
-                Button("选材料") { appState.pickMaterials() }
+                Button("导入") { appState.setWorkstation(.importMaterials) }
                     .keyboardShortcut("1", modifiers: [.command])
-                Button("成文书") { appState.composeDocument() }
+                Button("结构化") { appState.structureSelectedCase() }
                     .keyboardShortcut("2", modifiers: [.command])
-                Button("导出") { appState.exportDocument() }
+                Button("文书") { appState.composeDocument() }
                     .keyboardShortcut("3", modifiers: [.command])
+                Button("溯源") { appState.revealProvenance() }
+                    .keyboardShortcut("4", modifiers: [.command])
             }
             CommandGroup(replacing: .appSettings) {
                 Button("设置…") { appState.showSettings = true }
