@@ -231,6 +231,11 @@ final class BriefCardTests: XCTestCase {
         XCTAssertTrue(file.contains("电价P"))
         XCTAssertTrue(file.contains("0.65"))
         XCTAssertTrue(file.contains("第九条第七款"))
+        XCTAssertTrue(SampleCaseLoader.isLetterFormBrief(file))
+        XCTAssertTrue(FeeReportBuilder.isFeeReport(
+            brief: BriefCardParser.parse(file, caseID: UUID()),
+            kind: .customReport
+        ))
     }
 
     private func tableRef(_ filename: String) -> StructuredTableRef {

@@ -2,6 +2,26 @@ import XCTest
 @testable import Lushu
 
 final class HaitianFeeReportTests: XCTestCase {
+    func testDevelopmentDirectoryFindsLushuSampleCase() {
+        let directory = SampleCaseLoader.developmentDirectory()
+        XCTAssertTrue(SampleCaseLoader.isSampleDirectory(directory), directory.path)
+        XCTAssertTrue(
+            directory.path.contains("Lushu/Resources/SampleCase/haitian-parking")
+                || directory.path.contains("Resources/SampleCase/haitian-parking"),
+            directory.path
+        )
+        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("example-brief.txt").path))
+    }
+
+    func testExampleBriefIsLetterFormSoFeeReportBuilderRuns() {
+        let text = SampleCaseLoader.exampleBrief()
+        XCTAssertTrue(SampleCaseLoader.isLetterFormBrief(text))
+        let card = BriefCardParser.parse(text, caseID: UUID())
+        XCTAssertTrue(FeeReportBuilder.isFeeReport(brief: card, kind: .customReport))
+        XCTAssertFalse(text.contains("材料总结口径"))
+        XCTAssertFalse(text.contains("不得自行估数或凑整"))
+    }
+
     func testParkingLedgersMatchGoldYearTotals() throws {
         let directory = SampleCaseLoader.developmentDirectory()
         let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)

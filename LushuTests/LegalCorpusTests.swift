@@ -27,11 +27,10 @@ final class LegalCorpusTests: XCTestCase {
         XCTAssertTrue(fileChunk.heading.contains("基本规定"))
     }
 
-    func testUnknownArticleDoesNotInventText() {
-        let corpus = try? LegalCorpus.load(directory: Self.corpusDirectory())
-        XCTAssertNotNil(corpus)
-        XCTAssertThrowsError(try corpus?.lookup(lawID: "刑法", articleNum: "第零条")) { error in
-            guard case LegalCorpusError.articleNotInCorpus = error as? LegalCorpusError else {
+    func testUnknownArticleDoesNotInventText() throws {
+        let corpus = try LegalCorpus.load(directory: Self.corpusDirectory())
+        XCTAssertThrowsError(try corpus.lookup(lawID: "刑法", articleNum: "第零条")) { error in
+            guard let e = error as? LegalCorpusError, case .articleNotInCorpus = e else {
                 return XCTFail("expected articleNotInCorpus, got \(error)")
             }
         }

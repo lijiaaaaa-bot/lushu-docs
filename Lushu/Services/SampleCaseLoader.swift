@@ -7,8 +7,21 @@ enum SampleCaseLoader {
     static let iCloudPath = "/Users/lijia/Library/Mobile Documents/com~apple~CloudDocs/材料"
     static let excludedFromRepo = ["合同.pdf", "审计 PDF"]
 
-    static func developmentDirectory(filePath: String = #filePath) -> URL {
-        URL(fileURLWithPath: filePath)
+    /// 源码旁的示例子集。`#filePath` 必须写在函数体内：默认参数会在调用点展开，
+    /// 从 `LushuTests` 调用会错指到仓库根下不存在的 `Resources/SampleCase/haitian-parking`。
+    static func developmentDirectory() -> URL {
+        let sourceFile = URL(fileURLWithPath: #filePath)
+        var dir = sourceFile.deletingLastPathComponent()
+        for _ in 0..<8 {
+            let besideModule = dir.appendingPathComponent("Resources/SampleCase/haitian-parking", isDirectory: true)
+            if isSampleDirectory(besideModule) { return besideModule }
+            let underLushu = dir.appendingPathComponent("Lushu/Resources/SampleCase/haitian-parking", isDirectory: true)
+            if isSampleDirectory(underLushu) { return underLushu }
+            let parent = dir.deletingLastPathComponent()
+            if parent.path == dir.path { break }
+            dir = parent
+        }
+        return sourceFile
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("Resources/SampleCase/haitian-parking", isDirectory: true)
@@ -192,13 +205,26 @@ enum SampleCaseLoader {
     }
 
     static func exampleBrief() -> String {
-        let url = (try? resolveDirectory())?.appendingPathComponent("example-brief.txt")
-            ?? developmentDirectory().appendingPathComponent("example-brief.txt")
-        if let text = try? String(contentsOf: url, encoding: .utf8) {
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty { return trimmed }
+        var urls: [URL] = []
+        if let resolved = try? resolveDirectory() {
+            urls.append(resolved.appendingPathComponent("example-brief.txt"))
+        }
+        urls.append(developmentDirectory().appendingPathComponent("example-brief.txt"))
+        for url in urls {
+            if let text = try? String(contentsOf: url, encoding: .utf8) {
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if isLetterFormBrief(trimmed) { return trimmed }
+            }
         }
         return embeddedExampleBrief
+    }
+
+    /// 首页「示例」必须吃函件体要点，旧库存式 brief 会掉进 briefDriven 清单稿。
+    static func isLetterFormBrief(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return trimmed.contains("测算依据")
+            && (trimmed.contains("停车场电费") || trimmed.contains("参考电价"))
     }
 
     /// 文件缺失时的回退，与 example-brief.txt 同文，避免演示中断。
