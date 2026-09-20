@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// 首页主列宽度。豆包式居中栏，不是通栏稿纸。
+/// 首页两栏：左话题列表，右聊天。不是单栏居中大标题。
 enum HomeChatLayout {
-    static let columnWidth: CGFloat = 680
+    static let sidebarWidth: CGFloat = 248
+    static let columnWidth: CGFloat = 720
 }
 
 enum HomePillKind {

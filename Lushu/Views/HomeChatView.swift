@@ -1,18 +1,13 @@
 import SwiftUI
 
-/// 首页：豆包式短对话。长任务卡 / 真表 / 报告正文进工作区。
+/// 首页：左话题列表，右当前会话。工作区是次级，不塞进这一壳。
 struct HomeChatView: View {
     @EnvironmentObject private var appState: AppState
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            ScrollView {
-                chatColumn
-                    .frame(maxWidth: HomeChatLayout.columnWidth)
-                    .frame(maxWidth: .infinity)
-            }
-            composerBar
+        HStack(spacing: 0) {
+            HomeTopicSidebar()
+            chatPane
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.paper)
@@ -20,8 +15,43 @@ struct HomeChatView: View {
         .onAppear { appState.refreshDeepSeekKeyStatus() }
     }
 
+    private var chatPane: some View {
+        VStack(spacing: 0) {
+            chatHeader
+            ScrollView {
+                chatColumn
+            }
+            composerBar
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.paper)
+    }
+
+    private var chatHeader: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Text(appState.currentTopicTitle)
+                .font(Theme.screenTitle(18))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            HomeActionChip(title: "工作区", systemImage: "rectangle.split.3x1") {
+                appState.revealWorkspace()
+            }
+            HomeActionChip(title: "设置", systemImage: "gearshape") {
+                appState.showSettings = true
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Theme.walnut.opacity(0.12))
+                .frame(height: 1)
+        }
+    }
+
     private var chatColumn: some View {
-        VStack(alignment: .center, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             if appState.homeMessages.isEmpty {
                 emptyState
             } else {
@@ -36,40 +66,21 @@ struct HomeChatView: View {
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, appState.homeMessages.isEmpty ? 8 : 12)
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
         .padding(.bottom, 20)
-    }
-
-    private var header: some View {
-        ZStack {
-            Text("律书")
-                .font(Theme.brandTitle(appState.homeMessages.isEmpty ? 44 : 28))
-                .foregroundStyle(Theme.ink)
-            HStack {
-                Spacer()
-                HomeActionChip(title: "设置", systemImage: "gearshape") {
-                    appState.showSettings = true
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, appState.homeMessages.isEmpty ? 32 : 14)
-        .padding(.bottom, 10)
-        .frame(maxWidth: HomeChatLayout.columnWidth)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: HomeChatLayout.columnWidth, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("把要点贴进来，挂上材料，再生成下载。")
-                .font(Theme.serifBody(17))
+                .font(Theme.serifBody(16))
                 .foregroundStyle(Theme.ink)
-                .multilineTextAlignment(.center)
             Text("不编法条，不估台账数字。任务卡与报告正文在工作区。")
                 .font(Theme.serifBody(13))
                 .foregroundStyle(Theme.mute)
-                .multilineTextAlignment(.center)
 
             FlowRow(spacing: 8, lineSpacing: 8) {
                 HomePromptChip(title: "海天乙方电费+停车费报告", identifier: "home.haitianChip") {
@@ -80,9 +91,8 @@ struct HomeChatView: View {
                 }
             }
         }
-        .padding(.top, 72)
-        .padding(.bottom, 28)
-        .frame(maxWidth: .infinity)
+        .padding(.top, 28)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func materialList(_ materials: [MaterialItem]) -> some View {
@@ -116,8 +126,7 @@ struct HomeChatView: View {
                 .buttonStyle(.plain)
             }
         }
-        .frame(maxWidth: 420, alignment: .leading)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: 480, alignment: .leading)
     }
 
     private var actionPills: some View {
@@ -137,7 +146,6 @@ struct HomeChatView: View {
             }
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var composerBar: some View {
@@ -154,11 +162,6 @@ struct HomeChatView: View {
                 }
                 HomeActionChip(title: "设置", systemImage: "gearshape") {
                     appState.showSettings = true
-                }
-                if !appState.sources.isEmpty {
-                    HomeActionChip(title: "工作区", systemImage: "rectangle.split.3x1") {
-                        appState.revealWorkspace()
-                    }
                 }
             }
 
@@ -195,17 +198,10 @@ struct HomeChatView: View {
                     }
                 }
             }
-
-            Text("与案匣同族 · 不代写法条")
-                .font(Theme.caption(11))
-                .foregroundStyle(Theme.mute)
-                .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 16)
-        .frame(maxWidth: HomeChatLayout.columnWidth, alignment: .leading)
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 18)
+        .padding(.top, 10)
+        .padding(.bottom, 14)
         .background(Theme.paper)
         .overlay(alignment: .top) {
             Rectangle()
@@ -252,11 +248,11 @@ struct HomeChatView: View {
 #Preview("首页对话") {
     HomeChatView()
         .environmentObject(AppState())
-        .frame(width: 920, height: 720)
+        .frame(width: 1100, height: 720)
 }
 
 #Preview("已挂示例") {
     HomeChatView()
         .environmentObject(AppState(seedHomeSample: true))
-        .frame(width: 920, height: 720)
+        .frame(width: 1100, height: 720)
 }

@@ -121,6 +121,26 @@ final class BriefCardTests: XCTestCase {
         XCTAssertTrue(chat.hasCard)
     }
 
+    @MainActor
+    func testHomeTopicsIncludeInboxAndSelectedSample() {
+        let empty = AppState()
+        XCTAssertEqual(empty.homeTopics.count, 1)
+        XCTAssertEqual(empty.selectedTopicID, AppState.homeInboxID)
+        XCTAssertTrue(empty.homeTopics.contains { $0.isInbox && $0.title == "新对话" })
+
+        let seeded = AppState(seedHomeSample: true)
+        XCTAssertEqual(seeded.homeTopics.count, 2)
+        XCTAssertTrue(seeded.homeTopics.contains { $0.isInbox })
+        XCTAssertTrue(seeded.homeTopics.contains { $0.title.contains("海天") })
+        XCTAssertEqual(seeded.selectedTopicID, seeded.selectedSourceID)
+        XCTAssertNotEqual(seeded.selectedTopicID, AppState.homeInboxID)
+
+        seeded.startNewConversation()
+        XCTAssertEqual(seeded.selectedTopicID, AppState.homeInboxID)
+        seeded.selectTopic(seeded.sources[0].id)
+        XCTAssertEqual(seeded.selectedTopicID, seeded.sources[0].id)
+    }
+
     func testExampleBriefFileMatchesEmbeddedSeed() throws {
         let file = SampleCaseLoader.exampleBrief()
         XCTAssertTrue(file.contains("乙方"))

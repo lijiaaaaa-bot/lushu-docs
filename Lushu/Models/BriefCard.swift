@@ -100,6 +100,14 @@ struct BriefChatMessage: Identifiable, Hashable, Codable {
     }
 }
 
+/// 首页左栏话题：home inbox 或已挂 CaseSource。
+struct HomeTopic: Identifiable, Hashable {
+    var id: UUID
+    var title: String
+    var caption: String
+    var isInbox: Bool
+}
+
 /// 案件绑定的撰稿对话。没有选中 CaseSource 时不存在。
 struct CaseBriefChat: Identifiable, Hashable, Codable {
     var id: UUID

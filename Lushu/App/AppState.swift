@@ -96,6 +96,88 @@ final class AppState: ObservableObject {
 
     var homeMessages: [BriefChatMessage] { homeChat.messages }
 
+    var selectedTopicID: UUID { selectedSourceID ?? Self.homeInboxID }
+
+    var homeTopics: [HomeTopic] {
+        [inboxTopic] + sources.map(topic(for:))
+    }
+
+    var currentTopicTitle: String {
+        homeTopics.first(where: { $0.id == selectedTopicID })?.title ?? "新对话"
+    }
+
+    private var inboxTopic: HomeTopic {
+        let chat = briefChats[Self.homeInboxID] ?? CaseBriefChat(caseID: Self.homeInboxID)
+        let titled = topicTitle(card: chat.card, fallbackMessages: chat.messages, fallback: "新对话")
+        return HomeTopic(
+            id: Self.homeInboxID,
+            title: titled,
+            caption: chat.hasCard || !chat.messages.isEmpty ? "未挂案件" : "新对话",
+            isInbox: true
+        )
+    }
+
+    private func topic(for source: CaseSource) -> HomeTopic {
+        let chat = briefChats[source.id]
+        let fallback = source.isSample ? "海天乙方电费+停车费" : shortCaseTitle(source.title)
+        let title = topicTitle(card: chat?.card, fallbackMessages: chat?.messages ?? [], fallback: fallback)
+        let tables = source.materials.filter { $0.tableStatus == .realWorkbook }.count
+        return HomeTopic(
+            id: source.id,
+            title: title,
+            caption: tables > 0 ? "\(tables) 份真表" : source.locationCaption,
+            isInbox: false
+        )
+    }
+
+    private func topicTitle(card: BriefCard?, fallbackMessages: [BriefChatMessage], fallback: String) -> String {
+        if let card, card.isActionable {
+            if fallback.contains("海天") { return fallback }
+            return BriefCardParser.shortUserPreview(card.sourceMessage, card: card)
+        }
+        if let user = fallbackMessages.last(where: { $0.role == .user }), !user.text.isEmpty {
+            return String(user.text.prefix(18))
+        }
+        return fallback
+    }
+
+    private func shortCaseTitle(_ title: String) -> String {
+        if title.contains("海天") { return "海天乙方电费+停车费" }
+        if title.count <= 18 { return title }
+        return String(title.prefix(16)) + "…"
+    }
+
+    func selectTopic(_ id: UUID) {
+        showOnboarding = true
+        briefComposerText = ""
+        if id == Self.homeInboxID {
+            selectedSourceID = nil
+            selectedMaterialID = nil
+            if briefChats[Self.homeInboxID] == nil {
+                briefChats[Self.homeInboxID] = CaseBriefChat(caseID: Self.homeInboxID)
+            }
+            return
+        }
+        selectSource(id)
+    }
+
+    func startNewConversation() {
+        briefChats[Self.homeInboxID] = CaseBriefChat(caseID: Self.homeInboxID)
+        selectedSourceID = nil
+        selectedMaterialID = nil
+        briefComposerText = ""
+        showOnboarding = true
+    }
+
+    func removeTopic(_ id: UUID) {
+        if id == Self.homeInboxID {
+            startNewConversation()
+            return
+        }
+        removeSource(id)
+        showOnboarding = true
+    }
+
     var canGenerateFromHome: Bool {
         selectedSource != nil
             && hasActionableBrief
