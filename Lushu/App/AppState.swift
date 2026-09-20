@@ -521,13 +521,41 @@ final class AppState: ObservableObject {
         }
         var chat = briefChats[Self.homeInboxID] ?? CaseBriefChat(caseID: Self.homeInboxID)
         chat.card = BriefCardParser.parse(incoming, caseID: Self.homeInboxID, existing: chat.card)
-        chat.messages.append(BriefChatMessage(role: .user, text: BriefCardParser.shortUserPreview(incoming, card: chat.card)))
+        chat.messages.append(
+            BriefChatMessage(
+                role: .user,
+                text: BriefCardParser.shortUserPreview(incoming, card: chat.card),
+                attachmentIDs: newUserAttachmentIDs(in: chat.messages)
+            )
+        )
         chat.messages.append(
             BriefChatMessage(role: .assistant, text: BriefCardParser.shortAcknowledge(chat.card))
         )
         briefChats[Self.homeInboxID] = chat
         briefComposerText = ""
         flash("已记下要点。请挂上案件材料。")
+    }
+
+    func sendRelatedQuestion(_ text: String) {
+        let incoming = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !incoming.isEmpty else { return }
+        if let source = selectedSource {
+            var chat = briefChats[source.id] ?? CaseBriefChat(caseID: source.id)
+            chat.messages.append(BriefChatMessage(role: .user, text: incoming))
+            let inputs = structuredInputs(for: source)
+            chat.messages.append(
+                BriefChatMessage(
+                    role: .assistant,
+                    text: BriefCardParser.followUpAcknowledge(incoming, card: chat.card, inputs: inputs)
+                )
+            )
+            briefChats[source.id] = chat
+            try? packStore.writeBriefChat(source.pack, chat: chat)
+            briefComposerText = ""
+            return
+        }
+        briefComposerText = incoming
+        sendHomeMessage()
     }
 
     func updateBriefCard(revealWorkspace: Bool = false) {
@@ -544,7 +572,13 @@ final class AppState: ObservableObject {
         }
         if !incoming.isEmpty {
             chat.card = BriefCardParser.parse(incoming, caseID: source.id, existing: chat.card)
-            chat.messages.append(BriefChatMessage(role: .user, text: BriefCardParser.shortUserPreview(incoming, card: chat.card)))
+            chat.messages.append(
+                BriefChatMessage(
+                    role: .user,
+                    text: BriefCardParser.shortUserPreview(incoming, card: chat.card),
+                    attachmentIDs: newUserAttachmentIDs(in: chat.messages)
+                )
+            )
             briefComposerText = ""
         } else {
             chat.card = BriefCardParser.parse(sourceText, caseID: source.id, existing: chat.card)
@@ -645,9 +679,10 @@ final class AppState: ObservableObject {
         try? packStore.writeDraft(source.pack, draft: draft)
         if announceDownload {
             appendAssistant(
-                "已生成\(selectedKind.title)",
+                "已按任务卡落稿。未编造法条或台账数字。",
                 to: source.id,
-                action: .downloadDraft
+                action: .downloadDraft,
+                followUps: BriefCardParser.relatedQuestions(card: brief ?? BriefCard(caseID: source.id), inputs: inputs)
             )
             showOnboarding = true
         }
@@ -664,7 +699,11 @@ final class AppState: ObservableObject {
         let inputs = structuredInputs(for: source)
         chat.card = BriefCardParser.parse(text, caseID: source.id)
         chat.messages = [
-            BriefChatMessage(role: .user, text: BriefCardParser.shortUserPreview(text, card: chat.card)),
+            BriefChatMessage(
+                role: .user,
+                text: BriefCardParser.shortUserPreview(text, card: chat.card),
+                attachmentIDs: MaterialItem.homeVisible(source.materials).map(\.id)
+            ),
             BriefChatMessage(
                 role: .assistant,
                 text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs),
@@ -688,10 +727,19 @@ final class AppState: ObservableObject {
             let inputs = structuredInputs(for: source)
             chat.messages = chat.messages.map { message in
                 if message.role == .user, message.text.count > 40 {
-                    return BriefChatMessage(id: message.id, role: .user, text: BriefCardParser.shortUserPreview(message.text, card: chat.card), createdAt: message.createdAt, action: message.action)
+                    return BriefChatMessage(
+                        id: message.id,
+                        role: .user,
+                        text: BriefCardParser.shortUserPreview(message.text, card: chat.card),
+                        createdAt: message.createdAt,
+                        action: message.action,
+                        attachmentIDs: message.attachmentIDs,
+                        followUps: message.followUps
+                    )
                 }
                 return message
             }
+            attachHomeFilesIfNeeded(to: &chat.messages, source: source)
             chat.messages.append(
                 BriefChatMessage(
                     role: .assistant,
@@ -716,13 +764,37 @@ final class AppState: ObservableObject {
         appendAssistant(text, to: selectedSourceID ?? Self.homeInboxID)
     }
 
-    private func appendAssistant(_ text: String, to caseID: UUID, action: BriefChatAction? = nil) {
+    private func appendAssistant(
+        _ text: String,
+        to caseID: UUID,
+        action: BriefChatAction? = nil,
+        followUps: [String] = []
+    ) {
         var chat = briefChats[caseID] ?? CaseBriefChat(caseID: caseID)
-        chat.messages.append(BriefChatMessage(role: .assistant, text: text, action: action))
+        chat.messages.append(
+            BriefChatMessage(role: .assistant, text: text, action: action, followUps: followUps)
+        )
         briefChats[caseID] = chat
         if let source = sources.first(where: { $0.id == caseID }) {
             try? packStore.writeBriefChat(source.pack, chat: chat)
         }
+    }
+
+    private func newUserAttachmentIDs(in messages: [BriefChatMessage]) -> [UUID] {
+        let ids = homeMaterials.map(\.id)
+        guard !ids.isEmpty else { return [] }
+        if messages.contains(where: { $0.role == .user && !$0.attachmentIDs.isEmpty }) {
+            return []
+        }
+        return ids
+    }
+
+    private func attachHomeFilesIfNeeded(to messages: inout [BriefChatMessage], source: CaseSource) {
+        let ids = MaterialItem.homeVisible(source.materials).map(\.id)
+        guard !ids.isEmpty else { return }
+        if messages.contains(where: { $0.role == .user && !$0.attachmentIDs.isEmpty }) { return }
+        guard let index = messages.lastIndex(where: { $0.role == .user }) else { return }
+        messages[index].attachmentIDs = ids
     }
 
     private func maybePolishAfterGenerate() {

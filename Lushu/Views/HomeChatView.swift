@@ -51,14 +51,16 @@ struct HomeChatView: View {
     }
 
     private var chatColumn: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 18) {
             if appState.homeMessages.isEmpty {
                 emptyState
             } else {
                 ForEach(appState.homeMessages) { message in
                     BriefPaperCard(
                         message: message,
-                        attachments: attachments(for: message)
+                        attachments: attachments(for: message),
+                        draft: message.action == .downloadDraft ? appState.currentDraft : nil,
+                        showsGenerateOffer: isLatestGenerateOffer(message)
                     )
                 }
             }
@@ -92,14 +94,16 @@ struct HomeChatView: View {
     }
 
     private func attachments(for message: BriefChatMessage) -> [MaterialItem] {
-        guard message.role == .assistant else { return [] }
-        guard message.action == .offerGenerate || isLastAssistantAck(message) else { return [] }
-        return appState.homeMaterials
+        guard message.role == .user, !message.attachmentIDs.isEmpty else { return [] }
+        let all = appState.selectedSource?.materials ?? []
+        let byID = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+        return message.attachmentIDs.compactMap { byID[$0] }
     }
 
-    private func isLastAssistantAck(_ message: BriefChatMessage) -> Bool {
-        appState.homeMessages.last(where: { $0.role == .assistant && $0.action != .downloadDraft })?.id == message.id
-            && !appState.homeMaterials.isEmpty
+    private func isLatestGenerateOffer(_ message: BriefChatMessage) -> Bool {
+        guard message.action == .offerGenerate else { return false }
+        if appState.homeMessages.contains(where: { $0.action == .downloadDraft }) { return false }
+        return appState.homeMessages.last(where: { $0.action == .offerGenerate })?.id == message.id
     }
 
     private var composerBar: some View {
@@ -138,8 +142,8 @@ struct HomeChatView: View {
                     .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
             )
 
-            if appState.canGenerateFromHome {
-                HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
+            if appState.canGenerateFromHome, !hasVisibleGenerateOffer {
+                HomeTextLink(title: "生成文书", identifier: "home.generate") {
                     appState.generateFromHome()
                 }
             }
@@ -153,6 +157,10 @@ struct HomeChatView: View {
                 .fill(Theme.walnut.opacity(0.12))
                 .frame(height: 1)
         }
+    }
+
+    private var hasVisibleGenerateOffer: Bool {
+        appState.homeMessages.contains(where: isLatestGenerateOffer)
     }
 
     private var capsuleField: some View {
@@ -187,5 +195,13 @@ struct HomeChatView: View {
 #Preview("已挂示例") {
     HomeChatView()
         .environmentObject(AppState(seedHomeSample: true))
+        .frame(width: 1100, height: 720)
+}
+
+#Preview("已落稿") {
+    let state = AppState(seedHomeSample: true)
+    state.generateFromHome()
+    return HomeChatView()
+        .environmentObject(state)
         .frame(width: 1100, height: 720)
 }

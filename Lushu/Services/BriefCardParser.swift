@@ -55,6 +55,45 @@ enum BriefCardParser {
         shortAcknowledge(card, inputs: inputs)
     }
 
+    /// 生成后的相关追问。只点已写明的缺口，不编数字。
+    static func relatedQuestions(card: BriefCard, inputs: StructuredCaseInputs? = nil) -> [String] {
+        var questions: [String] = []
+        let yearMiss = yearGaps(requested: card.yearsScope, tables: inputs?.tables ?? [])
+        if !yearMiss.isEmpty {
+            let shown = yearMiss.prefix(2).joined(separator: "、")
+            questions.append("缺的\(shown)补上之前，报告口径怎么写？")
+        }
+        if card.missingFacts.contains(where: { $0.contains("电价") || $0.contains("灯数") }) {
+            questions.append("电价P和全场灯数N还缺，测算部分怎么落笔？")
+        }
+        if inputs?.tables.isEmpty == false {
+            questions.append("先只写已入库年份的停车费部分。")
+        } else if questions.count < 2 {
+            questions.append("还缺哪些材料才能生成完整报告？")
+        }
+        if questions.count < 2 {
+            questions.append("这份稿可以改成只写材料总结吗？")
+        }
+        return Array(questions.prefix(3))
+    }
+
+    /// 相关问题的短回执。不改任务卡，不估未给出的数字。
+    static func followUpAcknowledge(_ question: String, card: BriefCard, inputs: StructuredCaseInputs? = nil) -> String {
+        if question.contains("电价") || question.contains("灯数") {
+            return "电价P与全场灯数N仍未在材料中给出。测算章节只保留已定位原文，不估数、不外推全场。"
+        }
+        if question.contains("停车信息") || question.contains("缺的") || question.contains("口径") {
+            return "缺失年份不得补编。报告只列已入库真表年份，缺口写在待补材料。"
+        }
+        if question.contains("已入库") || question.contains("停车费部分") {
+            return "可以。停车费章节只列案件包内已有工作簿，不代算单元格金额。"
+        }
+        if question.contains("材料总结") {
+            return "可以改成材料总结。生成仍只吃结构化材料，不编法条或台账数字。"
+        }
+        return shortAcknowledge(card, inputs: inputs)
+    }
+
     static func yearGaps(requested: String, tables: [StructuredTableRef]) -> [String] {
         let wanted = parseYearList(requested)
         guard !wanted.isEmpty else { return [] }

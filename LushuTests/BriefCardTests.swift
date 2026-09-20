@@ -122,7 +122,7 @@ final class BriefCardTests: XCTestCase {
     }
 
     @MainActor
-    func testHomeTopicsIncludeInboxAndSelectedSample() {
+    func testHomeTopicsIncludeInboxAndSelectedSample() throws {
         let empty = AppState()
         XCTAssertEqual(empty.homeTopics.count, 1)
         XCTAssertEqual(empty.selectedTopicID, AppState.homeInboxID)
@@ -136,11 +136,79 @@ final class BriefCardTests: XCTestCase {
         XCTAssertNotEqual(seeded.selectedTopicID, AppState.homeInboxID)
         XCTAssertEqual(seeded.homeMessages.last(where: { $0.role == .assistant })?.action, .offerGenerate)
         XCTAssertFalse(seeded.homeMessages.contains { $0.text.contains("材料清单") })
+        let seededUser = try XCTUnwrap(seeded.homeMessages.first(where: { $0.role == .user }))
+        XCTAssertFalse(seededUser.attachmentIDs.isEmpty)
+        XCTAssertFalse(seeded.homeMessages.contains { $0.role == .assistant && !$0.attachmentIDs.isEmpty })
+        XCTAssertGreaterThanOrEqual(seeded.homeMaterials.count, 5)
 
         seeded.startNewConversation()
         XCTAssertEqual(seeded.selectedTopicID, AppState.homeInboxID)
         seeded.selectTopic(seeded.sources[0].id)
         XCTAssertEqual(seeded.selectedTopicID, seeded.sources[0].id)
+    }
+
+    @MainActor
+    func testHomeGenerateShowsFollowUpsWithoutInventedTotals() {
+        let seeded = AppState(seedHomeSample: true)
+        seeded.generateFromHome()
+        let document = seeded.homeMessages.last(where: { $0.action == .downloadDraft })
+        XCTAssertNotNil(document)
+        XCTAssertGreaterThanOrEqual(document?.followUps.count ?? 0, 2)
+        XCTAssertLessThanOrEqual(document?.followUps.count ?? 0, 3)
+        XCTAssertFalse(document?.followUps.joined().contains("0.85") ?? true)
+        XCTAssertFalse(seeded.currentDraft.isBlank)
+        XCTAssertFalse(seeded.currentDraft.plainText.contains("0.85元"))
+        XCTAssertFalse(seeded.currentDraft.chatPreviewSections.contains(where: { $0.heading.contains("清单") }))
+        XCTAssertTrue(seeded.homeMessages.contains { $0.role == .user && !$0.attachmentIDs.isEmpty })
+        XCTAssertFalse(seeded.homeMessages.contains { $0.role == .assistant && !$0.attachmentIDs.isEmpty })
+    }
+
+    func testRelatedQuestionsStayGrounded() {
+        let brief = BriefCardParser.parse(SampleCaseLoader.embeddedExampleBrief, caseID: UUID())
+        let tables = [
+            tableRef("2022年1月份到12月份阜外医院职工停车信息表.xlsx"),
+            tableRef("2026年1月份到12月份阜外医院职工停车信息表.xlsx")
+        ]
+        let inputs = StructuredCaseInputs(
+            caseTitle: "海天×阜外停车场费用材料",
+            metadata: [:],
+            tables: tables,
+            texts: []
+        )
+        let questions = BriefCardParser.relatedQuestions(card: brief, inputs: inputs)
+        XCTAssertGreaterThanOrEqual(questions.count, 2)
+        XCTAssertLessThanOrEqual(questions.count, 3)
+        XCTAssertFalse(questions.joined().contains("0.85"))
+        XCTAssertFalse(questions.joined().contains("行业经验"))
+        XCTAssertTrue(questions.contains(where: { $0.contains("电价") || $0.contains("停车") }))
+        let reply = BriefCardParser.followUpAcknowledge(questions[0], card: brief, inputs: inputs)
+        XCTAssertFalse(reply.contains("0.85"))
+        XCTAssertFalse(reply.contains("行业经验"))
+    }
+
+    @MainActor
+    func testRelatedQuestionKeepsBriefCard() {
+        let seeded = AppState(seedHomeSample: true)
+        seeded.generateFromHome()
+        let before = seeded.currentBriefCard
+        let question = "先只写已入库年份的停车费部分。"
+        seeded.sendRelatedQuestion(question)
+        XCTAssertEqual(seeded.currentBriefCard?.sourceMessage, before?.sourceMessage)
+        XCTAssertEqual(seeded.homeMessages.last(where: { $0.role == .user })?.text, question)
+        XCTAssertEqual(seeded.homeMessages.filter({ $0.role == .user && !$0.attachmentIDs.isEmpty }).count, 1)
+        XCTAssertFalse(seeded.homeMessages.last?.text.contains("0.85") ?? true)
+    }
+
+    func testBriefChatMessageDecodesLegacyPayload() throws {
+        let json = """
+        {"id":"00000000-0000-4000-8000-000000000002","role":"user","text":"乙方要点","createdAt":0}
+        """
+        let message = try JSONDecoder().decode(BriefChatMessage.self, from: Data(json.utf8))
+        XCTAssertEqual(message.text, "乙方要点")
+        XCTAssertTrue(message.attachmentIDs.isEmpty)
+        XCTAssertTrue(message.followUps.isEmpty)
+        XCTAssertEqual(HomeMaterialLabel.cardTitle("电缆采购合同最新.pdf"), "电缆采购合同最新.pdf")
+        XCTAssertTrue(HomeMaterialLabel.cardTitle("2022年1月份到12月份阜外医院职工停车信息表.xlsx").hasSuffix(".xlsx"))
     }
 
     func testExampleBriefFileMatchesEmbeddedSeed() throws {

@@ -85,19 +85,53 @@ struct BriefChatMessage: Identifiable, Hashable, Codable {
     var text: String
     var createdAt: Date
     var action: BriefChatAction?
+    /// 用户消息上方的材料卡片。助手气泡不再挂附件条。
+    var attachmentIDs: [UUID]
+    /// 生成后的「相关问题」，点选即发出短追问。
+    var followUps: [String]
 
     init(
         id: UUID = UUID(),
         role: BriefChatRole,
         text: String,
         createdAt: Date = Date(),
-        action: BriefChatAction? = nil
+        action: BriefChatAction? = nil,
+        attachmentIDs: [UUID] = [],
+        followUps: [String] = []
     ) {
         self.id = id
         self.role = role
         self.text = text
         self.createdAt = createdAt
         self.action = action
+        self.attachmentIDs = attachmentIDs
+        self.followUps = followUps
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, role, text, createdAt, action, attachmentIDs, followUps
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        role = try container.decode(BriefChatRole.self, forKey: .role)
+        text = try container.decode(String.self, forKey: .text)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        action = try container.decodeIfPresent(BriefChatAction.self, forKey: .action)
+        attachmentIDs = try container.decodeIfPresent([UUID].self, forKey: .attachmentIDs) ?? []
+        followUps = try container.decodeIfPresent([String].self, forKey: .followUps) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(role, forKey: .role)
+        try container.encode(text, forKey: .text)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(action, forKey: .action)
+        try container.encode(attachmentIDs, forKey: .attachmentIDs)
+        try container.encode(followUps, forKey: .followUps)
     }
 }
 

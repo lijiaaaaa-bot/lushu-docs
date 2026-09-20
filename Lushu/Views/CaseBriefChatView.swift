@@ -16,7 +16,12 @@ struct CaseBriefChatView: View {
                             .lineSpacing(4)
                     } else if let chat = appState.currentBriefChat, !chat.messages.isEmpty {
                         ForEach(chat.messages) { message in
-                            BriefPaperCard(message: message)
+                            BriefPaperCard(
+                                message: message,
+                                attachments: attachments(for: message),
+                                draft: message.action == .downloadDraft ? appState.currentDraft : nil,
+                                showsGenerateOffer: message.action == .offerGenerate
+                            )
                         }
                     } else {
                         Text("把长要点贴进下方，更新任务卡。用法像对话，色板仍是引导页的纸色与胡桃描边。")
@@ -32,6 +37,13 @@ struct CaseBriefChatView: View {
         }
         .background(Theme.paper)
         .tint(Theme.walnut)
+    }
+
+    private func attachments(for message: BriefChatMessage) -> [MaterialItem] {
+        guard message.role == .user, !message.attachmentIDs.isEmpty else { return [] }
+        let all = appState.selectedSource?.materials ?? []
+        let byID = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+        return message.attachmentIDs.compactMap { byID[$0] }
     }
 
     private var header: some View {

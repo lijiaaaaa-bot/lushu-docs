@@ -82,28 +82,136 @@ enum HomeMaterialLabel {
         if filename.count <= 16 { return filename }
         return String(filename.prefix(14)) + "…"
     }
+
+    static func cardTitle(_ filename: String) -> String {
+        if filename.count <= 18 { return filename }
+        let ext = (filename as NSString).pathExtension
+        let base = (filename as NSString).deletingPathExtension
+        if ext.isEmpty { return String(filename.prefix(16)) + "…" }
+        return String(base.prefix(12)) + "…." + ext
+    }
 }
 
-/// 助手气泡下的附件标签，横向换行，不像材料表。
-struct HomeAttachmentChip: View {
+/// 用户气泡上方的材料卡片：图标 + 文件名 + 类型。案匣纸色，不是冷灰。
+struct HomeFileCard: View {
+    let item: MaterialItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: symbol)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(Theme.walnut)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(HomeMaterialLabel.cardTitle(item.filename))
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(item.kind.displayName)
+                    .font(Theme.caption(10))
+                    .foregroundStyle(Theme.mute)
+            }
+        }
+        .padding(12)
+        .frame(width: 148, alignment: .leading)
+        .background(Theme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Theme.walnut.opacity(0.16), lineWidth: 1)
+        )
+    }
+
+    private var symbol: String {
+        switch item.kind {
+        case .xlsx: return "tablecells"
+        case .pdf: return "doc.richtext"
+        case .docx: return "doc.text"
+        default: return "doc"
+        }
+    }
+}
+
+/// 紧凑文字链：生成 / 下载，不用中段大号胡桃胶囊。
+struct HomeTextLink: View {
     let title: String
+    var identifier: String? = nil
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(Theme.caption(11))
+                .font(Theme.serifBody(13))
                 .foregroundStyle(Theme.walnut)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Theme.card)
-                .clipShape(Capsule(style: .continuous))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
-                )
         }
         .buttonStyle(.plain)
+        .identified(identifier)
+    }
+}
+
+/// 生成后的编号追问，点选即发出。
+struct HomeRelatedQuestions: View {
+    let questions: [String]
+    var onSelect: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("相关问题")
+                .font(Theme.caption(12))
+                .foregroundStyle(Theme.mute)
+            ForEach(Array(questions.enumerated()), id: \.offset) { index, question in
+                Button {
+                    onSelect(question)
+                } label: {
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("\(index + 1)")
+                            .font(Theme.caption(12))
+                            .foregroundStyle(Theme.walnut)
+                            .frame(width: 16, alignment: .leading)
+                        Text(question)
+                            .font(Theme.serifBody(13))
+                            .foregroundStyle(Theme.ink)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 4)
+    }
+}
+
+/// 已落稿在纸面上展开，不套紧白气泡，也不贴真表。
+struct HomeDocumentPage: View {
+    let draft: DraftDocument
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(draft.title)
+                .font(Theme.screenTitle(18))
+                .foregroundStyle(Theme.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            ForEach(draft.chatPreviewSections.prefix(4)) { section in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(section.heading)
+                        .font(Theme.screenTitle(14))
+                        .foregroundStyle(Theme.ink)
+                    Text(trimmed(section.body))
+                        .font(Theme.serifBody(14))
+                        .foregroundStyle(Theme.ink)
+                        .lineSpacing(5)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func trimmed(_ body: String) -> String {
+        let compact = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        if compact.count <= 360 { return compact }
+        return String(compact.prefix(358)).trimmingCharacters(in: .whitespacesAndNewlines) + "…"
     }
 }
 

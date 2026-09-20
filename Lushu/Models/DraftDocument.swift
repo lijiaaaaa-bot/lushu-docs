@@ -41,6 +41,13 @@ struct DraftDocument: Identifiable, Hashable, Codable {
         sections.allSatisfy { $0.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
 
+    /// 首页稿面预览：散文段落，跳过材料清单，不展开真表单元格。
+    var chatPreviewSections: [DraftSection] {
+        sections.filter { section in
+            !section.heading.contains("清单")
+        }
+    }
+
     private static func formatStamp(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
