@@ -134,8 +134,43 @@ enum SampleCaseLoader {
         if filename.contains("合同") { return true }
         if filename.contains("审计") { return true }
         if filename == "source.txt" { return true }
+        if filename == "example-brief.txt" { return true }
         return false
     }
+
+    static func exampleBrief() -> String {
+        let url = (try? resolveDirectory())?.appendingPathComponent("example-brief.txt")
+            ?? developmentDirectory().appendingPathComponent("example-brief.txt")
+        if let text = try? String(contentsOf: url, encoding: .utf8) {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+        return embeddedExampleBrief
+    }
+
+    /// 文件缺失时的回退，与 example-brief.txt 同文，避免演示中断。
+    static let embeddedExampleBrief = """
+    请按乙方（海天）立场，起草一份 2018–2026 年度停车场费用专项报告，供与阜外医院对账使用。不要写成通用聊天答复。
+
+    文书目的：整理职工停车费收取与停车场照明用电测算，形成可提交的专项报告（材料总结口径）。
+
+    请包含以下部分：
+    1. 立场与范围
+    2. 停车费（按年度真表）
+    3. 照明用电测算
+    4. 计算口径
+    5. 待补材料与缺口
+
+    计算规则（仅采用本要点已陈述的口径，律书不得另推公式或补数）：
+    - 停车费以各年「职工停车信息表」汇总页为准，不得自行估数或凑整。
+    - 照明若需算出电费金额：电费 = 电价P × 全场灯数N × 测算时长。目前材料只有分区灯具功率抽样，没有电价P，也没有全场灯数N。
+    - 2018–2021 年停车表若不在案件包内，必须写明缺失，禁止补编金额。
+
+    额外约束：
+    - 不引用未经 LegalCorpus 校验的法条，不编造请求权基础。
+    - 合同.pdf、审计件未入库，不得假装已读。
+    - 缺数就列缺口，不要用行业经验值填 电价P 或 全场灯数N。
+    """
 }
 
 enum SampleCaseError: LocalizedError {

@@ -48,15 +48,28 @@ CasePack/
 
 `Lushu/Resources/SampleCase/haitian-parking/`（海天×阜外停车场费用材料）：xlsx 进 `structured/tables`，docx 进 `raw/` 并提取。完整原件在 iCloud Drive「材料」；`合同.pdf` 与审计 PDF **不入库**。
 
+## 撰稿对话（CaseBriefChat）
+
+文书工位内的**案件绑定**对话，不是豆包式全局聊天。
+
+- 会话键 = 当前 `CaseSource.id` / CasePack。没有选中案件则没有对话。
+- 用户长要点解析为 `BriefCard`：立场（甲方/乙方/中立）、文书目的、章节、计算口径（仅用户已写）、年份/范围、额外约束、缺口。
+- `DocumentGenerator.generate(kind:inputs:brief:)` 按任务卡组章节，**只填** `StructuredCaseInputs`（真表清单 + 已定位文本）。缺 电价P、全场灯数N、某年停车表 → 写入缺口，不估数。
+- 不得编造法条；引用仍须 `LegalCorpus.validate`。润色若接线，只改已落稿措辞。
+- 对比豆包：有案件边界、有结构化真源、有任务卡、禁止自由 invent。
+
+示例子集预置 `example-brief.txt`（海天乙方 · 2018–2026 停车费+电费报告要点）。「载入示例案件」后到文书工位即可：对话 → 任务卡 chips → 生成文书。
+
 ## UI 落点（在现有三栏上）
 
 - 中栏材料：区分「原始」与「已结构化」；表格行显示「打开 Excel」而非碎文本预览为主
-- 右栏文书：引用角标可选显示；长按/旁路可打开隐式来源
-- 新工位条（剧本工厂感）：导入 → 结构化（表）→ 选文书类型 → 生成 → 溯源检查
+- 右栏文书：任务卡 chips 在稿面上方；文书工位右侧为撰稿对话（消息列表 + 多行输入；主操作「生成文书」「更新任务卡」）
+- 工位条：导入 → 结构化（表）→ 文书（含对话）→ 溯源检查
 
 ## 实现分期
 
 P0：架构文档 + CasePack 目录约定 + LegalCitation 模型 + 工位条  
 P1：xlsx 真写（ZipWriter/OOXML）  
 P2：文书生成强制读 structured/；引用必须经 bundled `LegalCorpus` 校验（子集已接入）  
-P3：隐式溯源 UI（稿面默认 hidden；溯源工位打开语料原文）
+P3：隐式溯源 UI（稿面默认 hidden；溯源工位打开语料原文）  
+P4：案件绑定撰稿对话 + BriefCard + brief-driven 专项报告（确定性组装）

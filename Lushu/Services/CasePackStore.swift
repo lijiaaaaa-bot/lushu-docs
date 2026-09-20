@@ -74,6 +74,14 @@ struct CasePackStore {
         try draft.markdown.write(to: dest, atomically: true, encoding: .utf8)
     }
 
+    func writeBriefChat(_ pack: CasePack, chat: CaseBriefChat) throws {
+        let dest = subdirectory(pack, CasePackLayout.drafts)
+            .appendingPathComponent("brief-chat.json")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(chat).write(to: dest, options: .atomic)
+    }
+
     func tableURL(_ pack: CasePack, filename: String) -> URL {
         subdirectory(pack, CasePackLayout.structuredTables).appendingPathComponent(filename)
     }

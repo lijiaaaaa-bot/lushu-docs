@@ -22,4 +22,7 @@ enum PendingIntegrations {
 
     /// 完整法索包接入点。子集已随 bundle 提供；此处留给全量 LegalKnowledge。
     static func attachFullLegalKnowledgeKit() {}
+
+    /// 润色只改已落稿措辞。不得在此编造法条或台账数字。
+    static func polishDraftWording(_: DraftDocument) -> DraftDocument? { nil }
 }

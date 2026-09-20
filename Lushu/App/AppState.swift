@@ -13,6 +13,9 @@ final class AppState: ObservableObject {
     @Published var selectedMaterialID: MaterialItem.ID?
     @Published var selectedKind: DocumentKind = .summary
     @Published var drafts: [UUID: DraftDocument] = [:]
+    @Published var briefChats: [UUID: CaseBriefChat] = [:]
+    @Published var briefComposerText: String = ""
+    @Published var showBriefChat: Bool = true
     @Published var searchText: String = ""
     @Published var focus: WorkspaceFocus = .materials
     @Published var workstation: WorkstationStage = .importMaterials
@@ -66,6 +69,15 @@ final class AppState: ObservableObject {
     var rawMaterials: [MaterialItem] { visibleMaterials.filter { $0.included && $0.layer == .raw } }
     var structuredMaterials: [MaterialItem] { visibleMaterials.filter { $0.included && $0.layer == .structured } }
 
+    var currentBriefChat: CaseBriefChat? {
+        guard let id = selectedSourceID else { return nil }
+        return briefChats[id]
+    }
+
+    var currentBriefCard: BriefCard? { currentBriefChat?.card }
+
+    var hasActionableBrief: Bool { currentBriefCard?.isActionable == true }
+
     init(
         seedSamples: Bool = false,
         seedDrafts: Bool = false,
@@ -96,10 +108,13 @@ final class AppState: ObservableObject {
             sources = [sample]
             selectedSourceID = sample.id
             drafts[sample.id] = DraftDocument.blankSummary(caseTitle: sample.title)
+            seedExampleBrief(for: sample)
+            selectedKind = .customReport
             showOnboarding = false
-            focus = .materials
-            workstation = .importMaterials
-            flash("已载入示例子集：\(sample.title)。完整原件在 iCloud Drive「材料」。")
+            focus = .manuscript
+            workstation = .document
+            showBriefChat = true
+            flash("已载入示例子集：\(sample.title)。已写入乙方费用报告任务卡，可点「生成文书」。")
         } catch {
             flash(error.localizedDescription)
         }
@@ -122,15 +137,20 @@ final class AppState: ObservableObject {
         selectedMaterialID = nil
         focus = .materials
         workstation = .importMaterials
+        briefComposerText = ""
         if drafts[id] == nil, let source = sources.first(where: { $0.id == id }) {
             drafts[id] = DraftDocument.blankSummary(caseTitle: source.title)
             try? preparePack(source)
+        }
+        if briefChats[id] == nil {
+            briefChats[id] = CaseBriefChat(caseID: id)
         }
     }
 
     func removeSource(_ id: CaseSource.ID) {
         sources.removeAll { $0.id == id }
         drafts[id] = nil
+        briefChats[id] = nil
         if selectedSourceID == id {
             selectedSourceID = sources.first?.id
             selectedMaterialID = nil
@@ -148,7 +168,7 @@ final class AppState: ObservableObject {
             workstation = .document
             return
         }
-        flash("「\(kind.title)」为后续文书类型，本轮仅开放材料总结。")
+        flash("「\(kind.title)」为后续文书类型，本轮开放材料总结与专项报告。")
     }
 
     func setWorkstation(_ stage: WorkstationStage) {
@@ -269,8 +289,57 @@ final class AppState: ObservableObject {
     }
 
     func requestLLMPolish() {
-        flash("大模型润色将读取钥匙串中的密钥。本轮不接线，本地摘要仍可用。")
+        guard let sourceID = selectedSourceID, var draft = drafts[sourceID], !draft.isBlank else {
+            flash("没有已落稿的事实可润色。润色不得增补数字或未校验法条。")
+            return
+        }
+        drafts[sourceID] = generator.polishWording(draft)
+        flash("润色只改已落稿措辞，不得增补数字或未经 LegalCorpus.validate 的法条。本轮不接线。")
         showSettings = true
+    }
+
+    func fillExampleBrief() {
+        guard let source = selectedSource, source.isSample else {
+            flash("示例要点只挂在海天×阜外示例子集上。")
+            return
+        }
+        briefComposerText = SampleCaseLoader.exampleBrief()
+        updateBriefCard()
+    }
+
+    func updateBriefCard() {
+        guard let source = selectedSource else {
+            flash("撰稿对话必须绑定当前案件，没有选中来源。")
+            return
+        }
+        var chat = briefChats[source.id] ?? CaseBriefChat(caseID: source.id)
+        let incoming = briefComposerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sourceText = incoming.isEmpty ? (chat.messages.last(where: { $0.role == .user })?.text ?? chat.card.sourceMessage) : incoming
+        guard !sourceText.isEmpty else {
+            flash("先写入长要点，再更新任务卡。")
+            return
+        }
+        if !incoming.isEmpty {
+            chat.messages.append(BriefChatMessage(role: .user, text: incoming))
+            briefComposerText = ""
+        }
+        let inputs = structuredInputs(for: source)
+        chat.card = BriefCardParser.parse(sourceText, caseID: source.id, existing: chat.card)
+        chat.messages.append(BriefChatMessage(role: .assistant, text: BriefCardParser.acknowledge(chat.card, inputs: inputs)))
+        briefChats[source.id] = chat
+        try? packStore.writeBriefChat(source.pack, chat: chat)
+        setWorkstation(.document)
+        flash("任务卡已更新。生成仍只吃结构化材料。")
+    }
+
+    func generateFromBrief() {
+        if !briefComposerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            updateBriefCard()
+        }
+        if let card = currentBriefCard, card.isActionable, card.documentPurpose.contains("报告") {
+            selectedKind = .customReport
+        }
+        composeDocument()
     }
 
     func updateSection(id: DraftSection.ID, body: String) {
@@ -318,13 +387,40 @@ final class AppState: ObservableObject {
             throw DocumentGenerationError.unstructuredInputsRejected
         }
         let inputs = structuredInputs(for: source)
-        let draft = try generator.generate(kind: selectedKind, inputs: inputs)
+        let brief = briefChats[source.id]?.card
+        let draft = try generator.generate(kind: selectedKind, inputs: inputs, brief: brief)
         drafts[source.id] = draft
         try? packStore.writeDraft(source.pack, draft: draft)
+        if let chat = briefChats[source.id] {
+            try? packStore.writeBriefChat(source.pack, chat: chat)
+            var updated = chat
+            updated.messages.append(
+                BriefChatMessage(
+                    role: .assistant,
+                    text: "已按本案件任务卡落稿《\(draft.title)》。数字只来自真表/已定位文本；缺口已写入「待补材料与缺口」。未写法条。"
+                )
+            )
+            briefChats[source.id] = updated
+        }
         previewMode = true
         focus = .manuscript
         workstation = .document
-        flash("已根据结构化案件包生成本地摘要。未写入任何法条。")
+        showBriefChat = true
+        flash(brief?.isActionable == true ? "已按任务卡组装文书。未编造法条或台账数字。" : "已根据结构化案件包生成本地摘要。未写入任何法条。")
+    }
+
+    private func seedExampleBrief(for source: CaseSource) {
+        let text = SampleCaseLoader.exampleBrief()
+        var chat = CaseBriefChat(caseID: source.id)
+        let inputs = structuredInputs(for: source)
+        chat.card = BriefCardParser.parse(text, caseID: source.id)
+        chat.messages = [
+            BriefChatMessage(role: .user, text: text),
+            BriefChatMessage(role: .assistant, text: BriefCardParser.acknowledge(chat.card, inputs: inputs))
+        ]
+        briefChats[source.id] = chat
+        try? packStore.writeBriefChat(source.pack, chat: chat)
+        briefComposerText = ""
     }
 
     @discardableResult

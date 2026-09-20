@@ -45,7 +45,7 @@
 
 - `CasePack`：`raw/` · `structured/tables/*.xlsx` · `structured/texts/*.jsonl` · `citations/` · `drafts/`
 - 表结构化工位写出**真 Excel**（OOXML），不是碎行文本
-- `DocumentGenerator` 只接受 `StructuredCaseInputs`
+- `DocumentGenerator` 只接受 `StructuredCaseInputs`；有任务卡时走 `generate(kind:inputs:brief:)`，按 BriefCard 组章节，仍不得编造法条或台账数字
 - `LegalCitation` 默认 hidden；溯源工位从 bundled 语料打开原文
 - `LegalCorpus` 加载 `Lushu/Resources/LegalKnowledge/`（法索 / LiJiaKit LegalKnowledge **2026.09.0** 子集：`2026.09.0-lushu-subset`，44 部、3788 条块）。范围：民法典各编 + 刑法及修正案 + 明确涉及民法典/刑法的司法解释。**查找失败即报错，不编造。** 完整法索包是后续事项。生成引用只能来自这些 JSON。
 
@@ -71,6 +71,14 @@ bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIn
 
 **不要提交**该目录里的大体积 PDF（`合同.pdf`、审计件）。本仓库只收可入库的 xlsx / docx 子集。
 
+### 撰稿对话（不是豆包）
+
+文书工位右侧是 **CaseBriefChat**：只挂当前案件。长要点 → `BriefCard`（立场 / 目的 / 章节 / 计算口径 / 年份 / 约束）。主按钮「生成文书」「更新任务卡」。稿面上方显示任务卡 chips。
+
+「载入示例案件」会写入 `example-brief.txt`（乙方 · 2018–2026 停车费与电费报告）。生成时列出 2022–2026 真表，并写明缺 2018–2021 表、电价P、全场灯数N。**不**用聊天模型补数或补法条。
+
+对比豆包：无全局闲聊、无孤儿会话、无自由 invent。
+
 ## 法条子集
 
 随应用打包（Xcode 同步 `Lushu/Resources/LegalKnowledge/`）：
@@ -80,7 +88,7 @@ bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIn
 - `laws_chunks.json`（`id`, `law_id`, `law_title`, `category`, `article_num`, `heading`, `text`）
 - `legal_practice_terms.json` / `repealed_laws.json`
 
-父语料：法索 LiJiaKit LegalKnowledge `2026.09.0`。本包 `2026.09.0-lushu-subset`。文书生成不得引用包外条文。单元测试：`LushuTests/LegalCorpusTests.swift`（刑法/第一条、民法典总则/第一条与文件原文比对）。Canvas 预览「语料探测」。
+父语料：法索 LiJiaKit LegalKnowledge `2026.09.0`。本包 `2026.09.0-lushu-subset`。文书生成不得引用包外条文。单元测试：`LushuTests/LegalCorpusTests.swift`（刑法/第一条、民法典总则/第一条与文件原文比对）；`LushuTests/BriefCardTests.swift`（示例要点 → 任务卡 → 缺口，不编造电价/法条）。Canvas 预览「语料探测」。
 
 ## 定位与案匣关系
 
@@ -91,13 +99,13 @@ bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIn
 
 ## 扩展文书类型
 
-`Lushu/Models/DocumentKind.swift`：`summary` 可用；`complaint` / `answer` 侧栏占位。新增类型只加枚举与模板，不另起应用。
+`Lushu/Models/DocumentKind.swift`：`summary` / `customReport` 可用（后者按任务卡组章节）；`complaint` / `answer` 侧栏占位。新增类型只加枚举与模板，不另起应用。
 
 ## 如何打开 Xcode
 
 1. Xcode 16+，打开 `Lushu.xcodeproj`。
 2. Scheme **Lushu**，目标 My Mac。
-3. Run。引导页「载入示例案件」打开海天×阜外示例子集；或选取 iCloud Drive「材料」。Canvas 预览：引导 / 工作区 / 稿纸。
+3. Run。引导页「载入示例案件」打开海天×阜外示例子集并进入文书工位（右侧撰稿对话 + 任务卡）。点「生成文书」看缺口（电价P、全场灯数N、2018–2021 表）。或选取 iCloud Drive「材料」。
 
 快捷键：⌘1 导入 · ⌘2 结构化 · ⌘3 文书 · ⌘4 溯源 · ⌘O 案匣文件夹 · ⌘E 导出。
 

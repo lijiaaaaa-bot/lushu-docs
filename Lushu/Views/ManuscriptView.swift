@@ -14,20 +14,10 @@ struct ManuscriptView: View {
                 ) {
                     appState.pickMaterials()
                 }
-            } else if appState.currentDraft.isBlank && !appState.isGenerating {
-                EmptyStateView(
-                    title: appState.currentDraft.title,
-                    detail: "点工位「结构化」写出 .xlsx，再点「文书」。生成器不会编造法条。",
-                    actionTitle: "成文书"
-                ) {
-                    appState.composeDocument()
-                }
             } else if appState.workstation == .provenance || appState.showHiddenCitations {
                 provenancePanel
-            } else if appState.previewMode {
-                paperPreview
             } else {
-                paperEditor
+                documentWorkbench
             }
         }
         .background(Theme.paper)
@@ -53,11 +43,81 @@ struct ManuscriptView: View {
             Text("·")
                 .foregroundStyle(Theme.mute)
                 .accessibilityHidden(true)
+            SerifTextButton(title: appState.showBriefChat ? "收起对话" : "撰稿对话") {
+                appState.showBriefChat.toggle()
+                if appState.showBriefChat {
+                    appState.setWorkstation(.document)
+                }
+            }
+            Text("·")
+                .foregroundStyle(Theme.mute)
+                .accessibilityHidden(true)
             SerifTextButton(title: "溯源") { appState.revealProvenance() }
         }
         .padding(.horizontal, Theme.pagePad)
         .padding(.vertical, 12)
         .background(Theme.paper)
+    }
+
+    private var documentWorkbench: some View {
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                briefChipBar
+                if appState.currentDraft.isBlank && !appState.isGenerating {
+                    EmptyStateView(
+                        title: appState.currentDraft.title,
+                        detail: "右侧写入本案件长要点，更新任务卡后生成。只填真表与已定位文本，缺 电价P / 全场灯数N 会写入缺口。",
+                        actionTitle: "生成文书"
+                    ) {
+                        appState.generateFromBrief()
+                    }
+                } else if appState.previewMode {
+                    paperPreview
+                } else {
+                    paperEditor
+                }
+            }
+            if appState.showBriefChat && appState.workstation == .document {
+                Rectangle()
+                    .fill(Theme.walnut.opacity(0.12))
+                    .frame(width: 1)
+                CaseBriefChatView()
+                    .frame(minWidth: 280, idealWidth: 332, maxWidth: 400)
+            }
+        }
+    }
+
+    private var briefChipBar: some View {
+        Group {
+            if let card = appState.currentBriefCard, card.isActionable {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("任务卡")
+                        .font(Theme.caption(11))
+                        .foregroundStyle(Theme.mute)
+                    chipRows(card.chips)
+                }
+                .padding(.horizontal, Theme.pagePad)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.paper)
+            }
+        }
+    }
+
+    private func chipRows(_ chips: [String]) -> some View {
+        let rows = stride(from: 0, to: chips.count, by: 3).map { index in
+            Array(chips[index..<min(index + 3, chips.count)])
+        }
+        return VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 6) {
+                    ForEach(row, id: \.self) { chip in
+                        ThemeBadge(text: chip, outlined: chip.hasPrefix("缺"))
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
     }
 
     private var paperPreview: some View {
@@ -230,4 +290,10 @@ struct ManuscriptView: View {
     ManuscriptView()
         .environmentObject(AppState(seedSamples: true, seedDrafts: true, seedFocus: .manuscript))
         .frame(width: 560, height: 720)
+}
+
+#Preview("撰稿对话") {
+    ManuscriptView()
+        .environmentObject(AppState(seedSamples: true, seedFocus: .manuscript))
+        .frame(width: 920, height: 720)
 }

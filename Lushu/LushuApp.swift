@@ -30,6 +30,10 @@ struct LushuApp: App {
                     .keyboardShortcut("2", modifiers: [.command])
                 Button("文书") { appState.composeDocument() }
                     .keyboardShortcut("3", modifiers: [.command])
+                Button("撰稿对话") {
+                    appState.showBriefChat = true
+                    appState.setWorkstation(.document)
+                }
                 Button("溯源") { appState.revealProvenance() }
                     .keyboardShortcut("4", modifiers: [.command])
             }
