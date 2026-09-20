@@ -6,17 +6,17 @@ import AppKit
 import UIKit
 #endif
 
-/// 律书 Theme —— 与案匣 Anxia **shipping** `Theme.swift` 对齐。
-/// 色值来自 LIVE Simulator + 案匣 Theme.swift，禁止另起色板。
+/// Shipping 案匣 `Theme.swift` tokens (LIVE app / Simulator).
+/// Not the anxia-support marketing site (ink #173F59, sky #EAF5FB, gold #B88B2E).
 enum Theme {
-    static let paper = Color(anxiaLight: 0xF4EFE6, dark: 0x12100C)
-    static let card = Color(anxiaLight: 0xFBF7F0, dark: 0x1C1914)
-    static let ink = Color(anxiaLight: 0x2A2118, dark: 0xEDE6DA)
-    static let mute = Color(anxiaLight: 0x6F675C, dark: 0x9A9084)
-    static let walnut = Color(anxiaLight: 0x4A3426, dark: 0xC4A484)
-    static let brass = Color(anxiaLight: 0xA6844A, dark: 0xC9A86A)
-
-    static let cornerRadius: CGFloat = 14
+    // Paper, walnut, brass — stationery cabinet
+    static let paper = Color(light: 0xF4EFE6, dark: 0x12100C)
+    static let card = Color(light: 0xFBF7F0, dark: 0x1C1914)
+    static let ink = Color(light: 0x2A2118, dark: 0xEDE6DA)
+    static let mute = Color(light: 0x6F675C, dark: 0x9A9084)
+    static let walnut = Color(light: 0x4A3426, dark: 0xC4A484)
+    static let brass = Color(light: 0xA6844A, dark: 0xC9A86A)
+    static let corner: CGFloat = 14
     static let pagePad: CGFloat = 22
 
     static var walnutStroke: Color { walnut.opacity(0.12) }
@@ -25,7 +25,7 @@ enum Theme {
     static let sidebarIdeal: CGFloat = 280
     static let materialsIdeal: CGFloat = 380
 
-    /// 品牌 / 屏幕标题：Noto Serif SC Black／Bold。未嵌入字体时回退宋体或系统 serif。
+    /// 品牌 / 屏幕标题：Noto Serif SC Black／Bold。未嵌入则回退宋体或系统 serif。
     static func brandTitle(_ size: CGFloat = 34) -> Font {
         serif(size, black: true)
     }
@@ -85,10 +85,10 @@ enum Theme {
 }
 
 extension Color {
-    /// 案匣动态色：light / dark 各一枚 0xRRGGBB。
-    init(anxiaLight light: UInt32, dark: UInt32) {
+    /// 与案匣相同的 light/dark 十六进制助手。
+    init(light: UInt32, dark: UInt32) {
         #if os(macOS)
-        self.init(nsColor: NSColor(name: "anxia.\(light).\(dark)", dynamicProvider: { appearance in
+        self.init(nsColor: NSColor(name: "theme.\(light).\(dark)", dynamicProvider: { appearance in
             let useDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             return Color.nsRGB(useDark ? dark : light)
         }))
@@ -128,10 +128,10 @@ struct ThemeCardModifier: ViewModifier {
         content
             .padding(16)
             .background(outlined ? Theme.paper : Theme.card)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-                    .stroke(emphasized ? Theme.brass : Theme.walnutStroke, lineWidth: emphasized ? 1.2 : 1)
+                RoundedRectangle(cornerRadius: Theme.corner, style: .continuous)
+                    .stroke(emphasized ? Theme.brass : Theme.walnut.opacity(0.12), lineWidth: emphasized ? 1.2 : 1)
             )
             .shadow(color: outlined ? .clear : Theme.inkShadow, radius: outlined ? 0 : 7, y: outlined ? 0 : 2)
     }

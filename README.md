@@ -6,20 +6,22 @@
 
 ## 本轮：界面先行（案匣 Theme 锁定）
 
-视觉以 **LIVE 案匣 Simulator + 案匣 `Theme.swift`** 为唯一色板，不另起系统。
+产品 UI **只用** LIVE 案匣 `Theme.swift`（文具柜：paper / walnut / brass）。
 
-`Lushu/App/Theme.swift` 原样镜像：
+**不要用** anxia-support 营销站色板（墨青 `#173F59`、浅空 `#EAF5FB`、点金 `#B88B2E`）。那是网站，不是 App。
+
+`Lushu/App/Theme.swift` 与案匣同一套 `Color(light:dark:)`：
 
 | Token | Light | Dark |
 |-------|-------|------|
-| paper | `0xF4EFE6` | `0x12100C` |
-| card | `0xFBF7F0` | `0x1C1914` |
-| ink | `0x2A2118` | `0xEDE6DA` |
-| mute | `0x6F675C` | `0x9A9084` |
-| walnut | `0x4A3426` | `0xC4A484` |
-| brass | `0xA6844A` | `0xC9A86A` |
+| paper | `#F4EFE6` (`0xF4EFE6`) | `#12100C` (`0x12100C`) |
+| card | `#FBF7F0` (`0xFBF7F0`) | `#1C1914` (`0x1C1914`) |
+| ink | `#2A2118` (`0x2A2118`) | `#EDE6DA` (`0xEDE6DA`) |
+| mute | `#6F675C` (`0x6F675C`) | `#9A9084` (`0x9A9084`) |
+| walnut | `#4A3426` (`0x4A3426`) | `#C4A484` (`0xC4A484`) |
+| brass | `#A6844A` (`0xA6844A`) | `#C9A86A` (`0xC9A86A`) |
 
-`cornerRadius` 14 continuous；`pagePad` 22。卡片：`Theme.card` 底，`walnut.opacity(0.12)` 描边，强调用 brass；未归抽屉为描边空心。禁止系统蓝 CTA。
+`corner` 14 continuous；`pagePad` 22。卡片：`Theme.card` 底 + `walnut.opacity(0.12)` 描边，强调用 brass。禁止系统蓝 CTA；底栏为衬线字「选材料 · 成文书 · 导出」。
 
 ### 三栏
 

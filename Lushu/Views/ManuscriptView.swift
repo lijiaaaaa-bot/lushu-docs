@@ -104,10 +104,10 @@ struct ManuscriptView: View {
                             .padding(10)
                             .frame(minHeight: 100)
                             .background(Theme.card)
-                            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.corner, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-                                    .stroke(Theme.walnutStroke, lineWidth: 1)
+                                RoundedRectangle(cornerRadius: Theme.corner, style: .continuous)
+                                    .stroke(Theme.walnut.opacity(0.12), lineWidth: 1)
                             )
                     }
                 }
