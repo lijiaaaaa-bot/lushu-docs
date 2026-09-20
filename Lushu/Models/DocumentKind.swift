@@ -1,6 +1,6 @@
 import Foundation
 
-/// 文书类型扩展点。当前仅 `summary` 可用；起诉状 / 答辩状占位，后续同一仓库演进。
+/// 文书类型扩展点。`summary` / `customReport` 共用撰稿对话。起诉状 / 答辩状仅占位，不另做第二套用法。
 enum DocumentKind: String, CaseIterable, Identifiable, Codable, Hashable {
     case summary
     case customReport

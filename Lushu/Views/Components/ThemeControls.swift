@@ -24,6 +24,41 @@ struct ThinSearchField: View {
     }
 }
 
+/// 与引导页检索框同一描边：paper 底、walnut.opacity(0.22)，不是蓝底发送框。
+struct ThinMultilineField: View {
+    var placeholder: String
+    @Binding var text: String
+    var minHeight: CGFloat = 88
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $text)
+                .font(Theme.serifBody(13))
+                .foregroundStyle(Theme.ink)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .tint(Theme.walnut)
+            if text.isEmpty {
+                Text(placeholder)
+                    .font(Theme.serifBody(13))
+                    .foregroundStyle(Theme.mute)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 10)
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(minHeight: minHeight, maxHeight: 140)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(Theme.paper)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
+        )
+    }
+}
+
 /// 案匣式底栏：衬线字按钮，中间圆点分隔。律书为「选材料 · 成文书 · 导出」。
 struct DotActionBar: View {
     var onPick: () -> Void

@@ -92,7 +92,7 @@ struct ManuscriptView: View {
             if let card = appState.currentBriefCard, card.isActionable {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("任务卡")
-                        .font(Theme.caption(11))
+                        .font(Theme.serifBody(12))
                         .foregroundStyle(Theme.mute)
                     chipRows(card.chips)
                 }
