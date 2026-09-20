@@ -47,7 +47,7 @@ final class HaitianFeeReportTests: XCTestCase {
         XCTAssertEqual(byYear[2025]?.reportedAmount, Decimal(927147))
         XCTAssertEqual(byYear[2026]?.reportedAmount, Decimal(579123))
         XCTAssertNil(byYear[2026]?.yearTotal)
-        XCTAssertTrue(byYear[2026]?.note.contains("未填") == true)
+        XCTAssertTrue(byYear[2026]?.note.contains("1月至7月") == true || byYear[2026]?.note.contains("待确认") == true)
     }
 
     func testLightingZonesParseFourMeasuredRooms() throws {
@@ -99,6 +99,15 @@ final class HaitianFeeReportTests: XCTestCase {
         XCTAssertTrue(headings.contains(where: { $0.contains("停车场电费") }))
         XCTAssertTrue(headings.contains(where: { $0.contains("职工停车费") }))
         XCTAssertTrue(headings.contains(where: { $0.contains("测算结论") }))
+        XCTAssertFalse(headings.contains(where: { $0.contains("抬头与背景") }))
+        XCTAssertTrue(body.contains("致河南省人民医院"))
+        XCTAssertTrue(body.contains("委托经营管理期限"))
+        XCTAssertTrue(body.contains("2023年3月"))
+        XCTAssertFalse(body.contains("（13个灯）（13个灯）"))
+        XCTAssertFalse(body.contains("测算步骤："))
+        for phrase in FeeReportVoice.bannedPhrases {
+            XCTAssertFalse(body.contains(phrase), "函件不得出现「\(phrase)」")
+        }
         XCTAssertTrue(body.contains("561,930.00") || body.contains("561930"))
         XCTAssertTrue(body.contains("751,350.00") || body.contains("751350"))
         XCTAssertTrue(body.contains("865,794.00") || body.contains("865794"))
@@ -121,12 +130,18 @@ final class HaitianFeeReportTests: XCTestCase {
         try DOCXDocumentWriter.write(draft, to: dest)
         let xml = String(data: try ZipArchive.data(named: "word/document.xml", in: dest), encoding: .utf8) ?? ""
         XCTAssertTrue(xml.contains("测算依据"))
+        XCTAssertTrue(xml.contains("致河南省人民医院"))
+        XCTAssertTrue(xml.contains("委托经营管理期限"))
         XCTAssertTrue(xml.contains("561"))
         XCTAssertTrue(xml.contains("<w:tbl>"))
         XCTAssertTrue(xml.contains("<w:tr>"))
         XCTAssertTrue(xml.contains("<w:tc>"))
         XCTAssertFalse(xml.contains("2022年 | 561"))
         XCTAssertFalse(xml.contains("根据刑法"))
+        XCTAssertFalse(xml.contains("DeepSeek"))
+        XCTAssertFalse(xml.contains("润色稿"))
+        XCTAssertFalse(xml.contains("抬头与背景"))
+        XCTAssertFalse(xml.contains("## "))
         XCTAssertFalse(draft.generatorLabel.contains("DeepSeek"), "无密钥时应保持骨架，但仍写出 Word 真表")
     }
 
@@ -161,9 +176,13 @@ final class HaitianFeeReportTests: XCTestCase {
         )
         let electricity = draft.sections.first { $0.heading.contains("电费") }?.body ?? ""
         XCTAssertTrue(electricity.contains("6.21"))
-        XCTAssertTrue(electricity.contains("电费金额留空") || electricity.contains("待补"))
+        XCTAssertTrue(electricity.contains("待双方确认") || electricity.contains("待补") || electricity.contains("电费金额"))
         XCTAssertFalse(electricity.contains("1055849.97"))
         XCTAssertFalse(electricity.contains("0.85"))
+        XCTAssertFalse(electricity.contains("测算步骤："))
+        for phrase in FeeReportVoice.bannedPhrases {
+            XCTAssertFalse(electricity.contains(phrase), "电费章不得出现「\(phrase)」")
+        }
     }
 
     func testDoesNotInventContractArticles() {
@@ -173,7 +192,10 @@ final class HaitianFeeReportTests: XCTestCase {
             brief: brief
         )
         let basis = draft.sections.first { $0.heading.contains("测算依据") }?.body ?? ""
-        XCTAssertTrue(basis.contains("不编造条文号"))
         XCTAssertFalse(basis.contains("第九条第七款"))
+        XCTAssertFalse(basis.contains("第十条"))
+        for phrase in FeeReportVoice.bannedPhrases {
+            XCTAssertFalse(basis.contains(phrase), "依据章不得出现「\(phrase)」")
+        }
     }
 }

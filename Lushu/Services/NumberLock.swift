@@ -64,11 +64,19 @@ enum NumberLock {
             return .failure(.changedOrDroppedTokens([]))
         }
 
+        let cleaned = FeeReportVoice.sanitize(polishedMarkdown, dropMarkdownHeadings: false)
+        do {
+            try validate(skeleton: lockSource(of: draft), polished: cleaned)
+        } catch {
+            // 清洗后若丢掉锁定数字，仍以未清洗稿做章节套回前的硬锁结果为准：失败则回退。
+            return .failure((error as? NumberLockError) ?? .changedOrDroppedTokens([]))
+        }
+
         var copy = draft
         var mapped = 0
         for index in copy.sections.indices {
-            if let body = extractSection(copy.sections[index].heading, from: polishedMarkdown) {
-                copy.sections[index].body = body
+            if let body = extractSection(copy.sections[index].heading, from: cleaned) {
+                copy.sections[index].body = FeeReportVoice.sanitize(body)
                 mapped += 1
             }
         }

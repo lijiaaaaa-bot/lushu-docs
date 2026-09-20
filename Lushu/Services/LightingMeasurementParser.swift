@@ -7,6 +7,13 @@ struct LightingZone: Hashable {
     var copyReading: Decimal?
     var kWh: Decimal?
     var watts: Decimal?
+    var installDate: String?
+    var copyDate: String?
+
+    var displayName: String {
+        name.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 enum LightingMeasurementParser {
@@ -31,7 +38,9 @@ enum LightingMeasurementParser {
                     installReading: install,
                     copyReading: copy,
                     kWh: kWh,
-                    watts: watts
+                    watts: watts,
+                    installDate: firstMatch(#"(20\d{2}年\d{1,2}月\d{1,2}日)[^\n]{0,24}安装表度数"#, in: block),
+                    copyDate: firstMatch(#"(20\d{2}年\d{1,2}月\d{1,2}日)[^\n]{0,24}抄表度数"#, in: block)
                 )
             )
         }
@@ -111,6 +120,35 @@ enum BriefFacts {
     static func allowsPriorYearEstimate(in text: String) -> Bool {
         (text.contains("2018") || text.contains("2021"))
             && (text.contains("参照") || text.contains("月均摊") || text.contains("按月均") || text.contains("估算"))
+    }
+
+    static func isHaitianParkingCase(inputs: StructuredCaseInputs, brief: BriefCard) -> Bool {
+        let blob = inputs.caseTitle + brief.sourceMessage
+        return (blob.contains("海天") || blob.contains("阜外")) && blob.contains("停车")
+    }
+
+    static func contractFullName(in text: String) -> String? {
+        firstMatch(#"《([^》]*委托经营管理[^》]*合同)》"#, in: text)
+            .map { "《\($0)》" }
+    }
+
+    static func managementTerm(in text: String) -> (years: String, start: String, end: String)? {
+        guard text.contains("委托经营管理期限") else { return nil }
+        let years = firstMatch(#"委托经营管理期限为\s*(\d+)\s*年"#, in: text) ?? "9"
+        let start = firstMatch(#"自\s*(20\d{2}年\d{1,2}月\d{1,2}日)\s*起"#, in: text)
+        let end = firstMatch(#"至\s*(20\d{2}年\d{1,2}月\d{1,2}日)\s*止"#, in: text)
+        guard let start, let end else { return nil }
+        return (years, start, end)
+    }
+
+    static func billingEvolution(in text: String) -> String? {
+        guard text.contains("2023年3月"), text.contains("计费方式") else { return nil }
+        if let sentence = firstMatch(#"((?:2022年度计费方式|计费方式为)[^。]{20,220}。(?:[^。]{0,160}。)?)"#, in: text) {
+            return sentence.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return """
+        依据双方确认的停车信息确认表，2022年度计费方式为：（计费车次＋停留车辆）×3元，其中停留车辆未计大于1天的天数；自2023年3月新系统启用起，计费方式调整为：计费车次×3元＋停留车辆×停留天数×3元，其中停留30天以上未计费用。
+        """
     }
 
     static func electricityPeriods(in text: String) -> [ElectricityPeriod] {

@@ -78,7 +78,9 @@ final class BriefCardTests: XCTestCase {
         XCTAssertTrue(headings.contains(where: { $0.contains("测算结论") }))
         XCTAssertTrue(body.contains("乙方"))
         XCTAssertTrue(body.contains("6.21瓦"))
-        XCTAssertTrue(body.contains("2018年停车信息表"))
+        XCTAssertTrue(body.contains("致河南省人民医院"))
+        XCTAssertTrue(body.contains("委托经营管理期限"))
+        XCTAssertFalse(body.contains("2018年停车信息表、2019年停车信息表"))
         XCTAssertFalse(body.contains("根据刑法"))
         XCTAssertFalse(body.contains("0.85元"))
         XCTAssertFalse(body.contains("行业经验"))
@@ -152,6 +154,11 @@ final class BriefCardTests: XCTestCase {
         XCTAssertFalse(document?.followUps.joined().contains("0.85") ?? true)
         XCTAssertFalse(seeded.currentDraft.isBlank)
         XCTAssertFalse(seeded.currentDraft.plainText.contains("0.85元"))
+        XCTAssertTrue(seeded.currentDraft.plainText.contains("致河南省人民医院"))
+        XCTAssertTrue(seeded.currentDraft.plainText.contains("委托经营管理期限"))
+        for phrase in FeeReportVoice.bannedPhrases {
+            XCTAssertFalse(seeded.currentDraft.plainText.contains(phrase), "函件不得出现「\(phrase)」")
+        }
         XCTAssertFalse(seeded.currentDraft.chatPreviewSections.contains(where: { $0.heading.contains("清单") }))
         XCTAssertTrue(seeded.homeMessages.contains { $0.role == .user && !$0.attachmentIDs.isEmpty })
         XCTAssertFalse(seeded.homeMessages.contains { $0.role == .assistant && !$0.attachmentIDs.isEmpty })

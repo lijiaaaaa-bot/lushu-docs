@@ -22,31 +22,31 @@ final class FeeReportPolishTests: XCTestCase {
 
     func testPolishWordingRejectsWhenModelChangesLockedAmount() {
         let draft = parkingDraft(body: """
-        2022年 | 561,930.00 | 汇总页
+        2022年 | 561,930.00 | 确认金额
         《合同》第九条第七款
         2018年9月1日
         """)
         let bad = """
         ## 职工停车费
-        现将年度列示。2022年 | 561,931.00 | 汇总页
+        现将年度列示。2022年 | 561,931.00 | 确认金额
         《合同》第九条第七款
         2018年9月1日
         """
         let result = DocumentGenerator().polishWording(draft, polishedMarkdown: bad)
         XCTAssertEqual(result.sections[0].body, draft.sections[0].body)
         XCTAssertFalse(result.generatorLabel.contains("DeepSeek"))
-        XCTAssertTrue(result.generatorLabel.contains("本地组装"))
+        XCTAssertTrue(result.generatorLabel.contains("函件测算报告"))
     }
 
     func testPolishWordingAcceptsVoiceChangeWhenNumbersLocked() {
         let draft = parkingDraft(body: """
-        2022年 | 561,930.00 | 汇总页
+        2022年 | 561,930.00 | 确认金额
         《合同》第九条第七款
         2018年9月1日
         """)
         let good = """
         ## 职工停车费
-        现将已确认年度列示如下。2022年 | 561,930.00 | 汇总页
+        现将已确认年度列示如下。2022年 | 561,930.00 | 确认金额
         《合同》第九条第七款仍按原文。自2018年9月1日起算。
         """
         let result = DocumentGenerator().polishWording(draft, polishedMarkdown: good)
@@ -67,8 +67,8 @@ final class FeeReportPolishTests: XCTestCase {
         var draft = parkingDraft(body: """
         （二）各年度职工停车费明细
         年度 | 金额（元） | 说明
-        2022年 | 561,930.00 | 汇总页
-        累计（截至2026年已填月份） | 3,685,344.00 | 仅加总已读出年份
+        2022年 | 561,930.00 | 2022年2月至12月
+        累计（截至2026年7月） | 3,685,344.00 | —
         """)
         draft.sections.append(
             DraftSection(
@@ -99,6 +99,26 @@ final class FeeReportPolishTests: XCTestCase {
         XCTAssertFalse(xml.contains("2022年 | 561,930.00"))
         XCTAssertFalse(xml.contains("1 | 乙方应缴纳停车场电费"))
         XCTAssertFalse(xml.contains("任务卡"))
+        XCTAssertFalse(xml.contains("DeepSeek"))
+        XCTAssertFalse(xml.contains("润色稿"))
+        XCTAssertFalse(xml.contains("## "))
+        XCTAssertFalse(xml.contains("抬头与背景"))
+    }
+
+    func testPolishStripsReintroducedBannedPhrases() {
+        let draft = parkingDraft(body: """
+        2022年 | 561,930.00 | 确认金额
+        《合同》第九条第七款
+        2018年9月1日
+        """)
+        let dirty = """
+        ## 职工停车费
+        已锁定2022年 | 561,930.00 | 确认金额。第九条第七款。2018年9月1日。
+        """
+        let result = DocumentGenerator().polishWording(draft, polishedMarkdown: dirty)
+        XCTAssertTrue(result.generatorLabel.contains("DeepSeek"))
+        XCTAssertTrue(result.sections[0].body.contains("561,930.00"))
+        XCTAssertFalse(result.sections[0].body.contains("已锁定"))
     }
 
     func testFeeReportPolishMessagesIncludeGoldStyleAndLocks() {
@@ -111,7 +131,7 @@ final class FeeReportPolishTests: XCTestCase {
         XCTAssertTrue(joined.contains("2018年9月1日"))
         XCTAssertTrue(joined.contains("禁止重算") || joined.contains("硬锁"))
         XCTAssertTrue(joined.contains("任务卡"))
-        XCTAssertTrue(joined.contains("致贵院"))
+        XCTAssertTrue(joined.contains("致河南省人民医院"))
         XCTAssertFalse(joined.contains("sk-"))
     }
 
@@ -124,7 +144,7 @@ final class FeeReportPolishTests: XCTestCase {
                 DraftSection(id: UUID(), heading: "职工停车费", body: body)
             ],
             generatedAt: Date(),
-            generatorLabel: "结构化测算报告 · 本地组装",
+            generatorLabel: "函件测算报告",
             citations: []
         )
     }

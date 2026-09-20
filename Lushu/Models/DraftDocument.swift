@@ -15,15 +15,23 @@ struct DraftDocument: Identifiable, Hashable, Codable {
     var generatorLabel: String
     var citations: [LegalCitation]
 
+    var isLetterFeeReport: Bool {
+        kind == .customReport && sections.contains(where: {
+            $0.heading.contains("测算") || $0.heading.contains("电费") || $0.heading.contains("停车")
+        })
+    }
+
     var markdown: String {
         var lines: [String] = ["# \(title)", ""]
-        if let generatedAt {
+        if let generatedAt, !isLetterFeeReport {
             lines.append("_\(generatorLabel) · \(DraftDocument.formatStamp(generatedAt))_")
             lines.append("")
         }
         for section in sections {
-            lines.append("## \(section.heading)")
-            lines.append("")
+            if !section.heading.isEmpty {
+                lines.append("## \(section.heading)")
+                lines.append("")
+            }
             lines.append(section.body)
             lines.append("")
         }

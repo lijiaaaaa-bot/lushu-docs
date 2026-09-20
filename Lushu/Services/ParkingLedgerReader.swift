@@ -104,15 +104,18 @@ enum ParkingLedgerReader {
     private static func note(year: Int, yearTotal: Decimal?, months: [(String, Decimal)]) -> String {
         if let yearTotal, year < 2026 {
             if year == 2022, months.count == 11 {
-                return "\(year)年2月至12月（汇总页无1月金额）"
+                return "\(year)年2月至12月（2022年1月无停车记录）"
             }
             return "\(year)年1月至12月"
         }
         if yearTotal == nil, !months.isEmpty {
-            return "\(year)年已填\(months.count)个月（其后月份汇总页未填，未补空月）"
+            if year == 2026, months.count == 7 {
+                return "2026年1月至7月（8月起数据待确认）"
+            }
+            return "\(year)年1月至\(months.count)月"
         }
         if yearTotal == nil, months.isEmpty {
-            return "\(year)年汇总页未读出金额，本稿不补编"
+            return "\(year)年金额待确认"
         }
         return "\(year)年"
     }

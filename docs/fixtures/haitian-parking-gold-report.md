@@ -24,4 +24,4 @@
 
 - 年度金额必须来自 bundled xlsx「汇总」页，不得手写库存列名充数。
 - 缺年、缺 P、缺灯数时：章节仍在，金额留空并说明，禁止「不代算」一句打发全章。
-- 润色语气与数字锁见 `haitian-parking-style-note.md`。Word 导出用真表；模型不得改金额/条号/日期。
+- 函件语气与禁止系统口吻见 `haitian-parking-style-note.md`。Word 导出用真表；模型不得改金额/条号/日期。骨架摘录见 `haitian-parking-letter-excerpt.md`。

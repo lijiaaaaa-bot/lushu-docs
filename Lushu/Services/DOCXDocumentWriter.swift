@@ -60,12 +60,21 @@ enum DOCXDocumentWriter {
 
     private static func documentXML(_ draft: DraftDocument) -> String {
         var blocks = [titleParagraph(draft.title)]
-        if let generatedAt = draft.generatedAt, shouldShowStamp(draft.generatorLabel) {
-            blocks.append(metaParagraph("\(draft.generatorLabel) · \(stamp(generatedAt))"))
-        }
         for section in draft.sections {
-            blocks.append(headingParagraph(section.heading))
-            blocks.append(contentsOf: bodyBlocks(section.body, heading: section.heading))
+            let heading = section.heading.trimmingCharacters(in: .whitespaces)
+            if shouldLeadWithAddressee(heading: heading, body: section.body) {
+                let parts = splitOpening(section.body)
+                blocks.append(contentsOf: bodyBlocks(parts.opening, heading: heading))
+                if !heading.isEmpty, heading != "函首" {
+                    blocks.append(headingParagraph(heading))
+                }
+                blocks.append(contentsOf: bodyBlocks(parts.rest, heading: heading))
+            } else {
+                if !heading.isEmpty, heading != "函首" {
+                    blocks.append(headingParagraph(heading))
+                }
+                blocks.append(contentsOf: bodyBlocks(section.body, heading: heading))
+            }
         }
         return """
         <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -77,13 +86,23 @@ enum DOCXDocumentWriter {
         """
     }
 
-    private static func shouldShowStamp(_ label: String) -> Bool {
-        let banned = ["结构化", "任务卡", "本地组装", "未接模型"]
-        return !banned.contains(where: { label.contains($0) })
+    private static func shouldLeadWithAddressee(heading: String, body: String) -> Bool {
+        heading.contains("测算依据") && body.contains("致")
+    }
+
+    private static func splitOpening(_ body: String) -> (opening: String, rest: String) {
+        let lines = body.components(separatedBy: .newlines)
+        if let index = lines.firstIndex(where: { isSubheading($0.trimmingCharacters(in: .whitespaces)) }) {
+            let opening = lines[..<index].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            let rest = lines[index...].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            return (opening, rest)
+        }
+        return (body, "")
     }
 
     private static func bodyBlocks(_ body: String, heading: String) -> [String] {
         let lines = body.components(separatedBy: .newlines)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("#") }
         var blocks: [String] = []
         var index = 0
         var seenSummary = false
@@ -153,6 +172,9 @@ enum DOCXDocumentWriter {
         guard inConclusion, afterSummary || line.contains("公司") else { return false }
         if line.contains("公司") { return true }
         if line.hasPrefix("（") && line.hasSuffix("）") && line.count < 48 { return true }
+        if afterSummary, line.range(of: #"^20\d{2}年\d{1,2}月\d{1,2}日$"#, options: .regularExpression) != nil {
+            return true
+        }
         return false
     }
 
@@ -236,15 +258,6 @@ enum DOCXDocumentWriter {
         """
     }
 
-    private static func metaParagraph(_ text: String) -> String {
-        """
-        <w:p>
-        <w:pPr><w:jc w:val="right"/><w:spacing w:after="160"/></w:pPr>
-        <w:r><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/><w:color w:val="6F675C"/></w:rPr><w:t xml:space="preserve">\(escape(text))</w:t></w:r>
-        </w:p>
-        """
-    }
-
     private static func paragraph(_ text: String, bold: Bool = false) -> String {
         let runProps = bold ? "<w:rPr><w:b/></w:rPr>" : ""
         return "<w:p><w:r>\(runProps)<w:t xml:space=\"preserve\">\(escape(text))</w:t></w:r></w:p>"
@@ -258,10 +271,4 @@ enum DOCXDocumentWriter {
             .replacingOccurrences(of: "\"", with: "&quot;")
     }
 
-    private static func stamp(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
-        formatter.dateFormat = "yyyy年M月d日 HH:mm"
-        return formatter.string(from: date)
-    }
 }
