@@ -1,50 +1,34 @@
 import SwiftUI
 
-/// 引导页同款纸卡：要点用 brass 强调卡，律书回执用描边纸卡。不是蓝气泡。
+/// 对话气泡：用户靠右、回执靠左。纸色/卡片底 + 胡桃/黄铜描边，不是蓝气泡。
 struct BriefPaperCard: View {
     let message: BriefChatMessage
 
     var body: some View {
         let isUser = message.role == .user
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
+        HStack(alignment: .top, spacing: 0) {
+            if isUser { Spacer(minLength: 72) }
+            VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
                 ThemeBadge(text: isUser ? "要点" : "律书", outlined: !isUser)
-                Spacer()
+                Text(message.text)
+                    .font(Theme.serifBody(14))
+                    .foregroundStyle(Theme.ink)
+                    .lineSpacing(4)
+                    .textSelection(.enabled)
+                    .multilineTextAlignment(isUser ? .trailing : .leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text(isUser ? "委托要点" : "回执")
-                .font(Theme.screenTitle(16))
-                .foregroundStyle(Theme.ink)
-            Text(message.text)
-                .font(Theme.serifBody(14))
-                .foregroundStyle(isUser ? Theme.ink : Theme.mute)
-                .lineSpacing(4)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(isUser ? Theme.card : Theme.paper)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isUser ? Theme.brass : Theme.walnut.opacity(0.22), lineWidth: isUser ? 1.2 : 1)
+            )
+            .frame(maxWidth: 520, alignment: isUser ? .trailing : .leading)
+            if !isUser { Spacer(minLength: 72) }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .themeCard(emphasized: isUser, outlined: !isUser)
-    }
-}
-
-struct HomePromptChip: View {
-    let title: String
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(Theme.serifBody(13))
-                .foregroundStyle(Theme.walnut)
-                .multilineTextAlignment(.leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Theme.card)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
     }
 }
