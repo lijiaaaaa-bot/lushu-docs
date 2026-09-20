@@ -108,4 +108,26 @@ struct MaterialItem: Identifiable, Hashable, Codable {
         if tableStatus != .notTable { return tableStatus.label }
         return layer == .structured ? "已结构化" : "原始"
     }
+
+    /// 首页列表：xlsx 已进 structured/tables 成真表后，不再列出 raw 同名/同逻辑件。
+    static func homeVisible(_ items: [MaterialItem]) -> [MaterialItem] {
+        let workbookKeys = Set(items.filter { $0.tableStatus == .realWorkbook }.map(\.logicalKey))
+        return items.filter { item in
+            if item.tableStatus == .realWorkbook { return true }
+            if workbookKeys.contains(item.logicalKey) { return false }
+            return true
+        }
+    }
+
+    var logicalKey: String {
+        let name = filename.lowercased()
+        if let year = BriefCardParser.year(in: filename),
+           name.contains("停车") && (name.contains("信息表") || kind == .xlsx) {
+            return "parking-\(year)"
+        }
+        if name.contains("照明") || name.contains("用电") {
+            return "lighting"
+        }
+        return (filename as NSString).deletingPathExtension.lowercased()
+    }
 }

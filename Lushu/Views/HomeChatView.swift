@@ -28,8 +28,8 @@ struct HomeChatView: View {
                 ForEach(appState.homeMessages) { message in
                     BriefPaperCard(message: message)
                 }
-                if let source = appState.selectedSource, !source.materials.isEmpty {
-                    materialList(source.materials)
+                if !appState.homeMaterials.isEmpty {
+                    materialList(appState.homeMaterials)
                 }
                 if appState.canGenerateFromHome || appState.hasGeneratedDraft {
                     actionPills
@@ -236,11 +236,13 @@ struct HomeChatView: View {
     }
 
     private func shortMaterialName(_ filename: String) -> String {
-        if filename.contains("停车"), let year = BriefCardParser.year(in: filename) {
-            return "\(year)年停车表"
-        }
         if filename.contains("照明") || filename.contains("用电") {
             return "照明测算"
+        }
+        if filename.contains("停车信息") || filename.lowercased().hasSuffix(".xlsx"),
+           filename.contains("停车"),
+           let year = BriefCardParser.year(in: filename) {
+            return "\(year)年停车表"
         }
         if filename.count <= 16 { return filename }
         return String(filename.prefix(14)) + "…"

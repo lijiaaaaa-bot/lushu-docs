@@ -60,6 +60,10 @@ final class AppState: ObservableObject {
         }
     }
 
+    var homeMaterials: [MaterialItem] {
+        MaterialItem.homeVisible(selectedSource?.materials ?? [])
+    }
+
     var visibleMaterials: [MaterialItem] {
         guard let source = selectedSource else { return [] }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)

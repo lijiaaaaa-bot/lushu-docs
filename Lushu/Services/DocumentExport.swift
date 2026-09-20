@@ -12,26 +12,48 @@ enum DocumentExport {
         return "\(stem).\(ext)"
     }
 
-    /// 优先弹出系统保存面板写 .docx；取消或失败时回退 Downloads 的 .md。
+    /// 系统保存面板默认文件名与目标：有 docx 就写 .docx，否则 .md。
+    static func savePlan(docx: URL, markdown: URL, draft: DraftDocument) -> (source: URL, filename: String, ext: String) {
+        if FileManager.default.fileExists(atPath: docx.path) {
+            return (docx, suggestedFilename(for: draft, ext: "docx"), "docx")
+        }
+        return (markdown, suggestedFilename(for: draft, ext: "md"), "md")
+    }
+
+    static func resolvedDestination(_ picked: URL, preferredExtension: String) -> URL {
+        let ext = picked.pathExtension.lowercased()
+        if ext == "docx" || ext == "md" { return picked }
+        if ext.isEmpty {
+            return picked.appendingPathExtension(preferredExtension)
+        }
+        return picked.deletingPathExtension().appendingPathExtension(preferredExtension)
+    }
+
+    /// 弹出系统保存面板，默认写出 .docx。
     @MainActor
     static func saveUserCopy(docx: URL, markdown: URL, draft: DraftDocument) throws {
-        let docxExists = FileManager.default.fileExists(atPath: docx.path)
+        let plan = savePlan(docx: docx, markdown: markdown, draft: draft)
         #if os(macOS)
         let panel = NSSavePanel()
         panel.canCreateDirectories = true
         panel.title = "下载文书"
-        panel.nameFieldStringValue = suggestedFilename(for: draft, ext: docxExists ? "docx" : "md")
-        if let word = UTType(filenameExtension: "docx") {
-            panel.allowedContentTypes = [word, .utf8PlainText]
+        panel.nameFieldStringValue = plan.filename
+        panel.allowsOtherFileTypes = false
+        if plan.ext == "docx", let word = UTType(filenameExtension: "docx") {
+            var types = [word]
+            if let md = UTType(filenameExtension: "md") { types.append(md) }
+            panel.allowedContentTypes = types
+        } else if let md = UTType(filenameExtension: "md") {
+            panel.allowedContentTypes = [md]
         } else {
-            panel.allowedFileTypes = ["docx", "md"]
+            panel.allowedFileTypes = [plan.ext, "md"]
         }
-        guard panel.runModal() == .OK, let dest = panel.url else { return }
-        let useMarkdown = dest.pathExtension.lowercased() == "md" || !docxExists
-        let source = useMarkdown ? markdown : docx
+        guard panel.runModal() == .OK, let picked = panel.url else { return }
+        let dest = resolvedDestination(picked, preferredExtension: plan.ext)
+        let source = dest.pathExtension.lowercased() == "md" ? markdown : plan.source
         try copyReplacing(from: source, to: dest)
         #else
-        try copyToDownloads(docxExists ? docx : markdown, draft: draft, ext: docxExists ? "docx" : "md")
+        try copyToDownloads(plan.source, draft: draft, ext: plan.ext)
         #endif
     }
 

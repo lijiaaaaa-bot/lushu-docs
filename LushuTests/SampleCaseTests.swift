@@ -46,6 +46,69 @@ final class SampleCaseTests: XCTestCase {
         XCTAssertTrue(extract.contains("负一层 西直梯电房"))
         XCTAssertTrue(extract.contains("6.21瓦"))
         XCTAssertFalse(extract.hasPrefix("已定位材料："))
+
+        let home = MaterialItem.homeVisible(source.materials)
+        XCTAssertEqual(home.filter { $0.kind == .xlsx }.count, 5)
+        XCTAssertEqual(home.filter { $0.filename.contains("2026") && $0.filename.contains("停车信息") }.count, 1)
+        XCTAssertEqual(home.first { $0.filename.contains("2026") && $0.filename.contains("停车信息") }?.tableStatus, .realWorkbook)
+        XCTAssertFalse(home.contains { $0.kind == .xlsx && $0.layer == .raw })
+        XCTAssertEqual(home.filter { $0.kind == .docx }.count, 1)
+        XCTAssertNotEqual(home.first { $0.kind == .docx }?.logicalKey, home.first { $0.filename.contains("2026") && $0.kind == .xlsx }?.logicalKey)
+    }
+
+    func testHomeVisibleDropsRawWhenStructuredWorkbookExists() {
+        let raw = MaterialItem(
+            filename: "2026年1月份到12月份阜外医院职工停车信息表.xlsx",
+            kind: .xlsx,
+            byteCount: 10,
+            relativePath: "raw/2026年1月份到12月份阜外医院职工停车信息表.xlsx",
+            layer: .raw,
+            tableStatus: .notTable
+        )
+        let real = MaterialItem(
+            filename: "2026年1月份到12月份阜外医院职工停车信息表.xlsx",
+            kind: .xlsx,
+            byteCount: 10,
+            relativePath: "structured/tables/2026年1月份到12月份阜外医院职工停车信息表.xlsx",
+            layer: .structured,
+            tableStatus: .realWorkbook
+        )
+        let lighting = MaterialItem(
+            filename: "2026.9.16停车场照明用电测算表-新.docx",
+            kind: .docx,
+            byteCount: 10,
+            relativePath: "raw/2026.9.16停车场照明用电测算表-新.docx",
+            layer: .raw,
+            tableStatus: .notTable
+        )
+        let visible = MaterialItem.homeVisible([raw, real, lighting])
+        XCTAssertEqual(visible.count, 2)
+        XCTAssertTrue(visible.contains { $0.tableStatus == .realWorkbook })
+        XCTAssertFalse(visible.contains { $0.id == raw.id })
+        XCTAssertTrue(visible.contains { $0.kind == .docx })
+        XCTAssertEqual(raw.logicalKey, real.logicalKey)
+        XCTAssertNotEqual(lighting.logicalKey, real.logicalKey)
+    }
+
+    func testDownloadSavePlanPrefersDocx() throws {
+        let draft = DraftDocument.blankSummary(caseTitle: "海天×阜外")
+        var filled = draft
+        filled.sections[0].body = "只列真表，不编法条。"
+        filled.generatedAt = Date()
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LushuExport-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        let docx = tmp.appendingPathComponent("report.docx")
+        let md = tmp.appendingPathComponent("report.md")
+        try filled.markdown.write(to: md, atomically: true, encoding: .utf8)
+        try DOCXDocumentWriter.write(filled, to: docx)
+
+        let plan = DocumentExport.savePlan(docx: docx, markdown: md, draft: filled)
+        XCTAssertEqual(plan.ext, "docx")
+        XCTAssertTrue(plan.filename.hasSuffix(".docx"))
+        XCTAssertEqual(DocumentExport.resolvedDestination(URL(fileURLWithPath: "/tmp/报告"), preferredExtension: "docx").pathExtension, "docx")
+        XCTAssertTrue(ZipArchive.hasEntry(named: "word/document.xml", in: docx))
     }
 
     func testResolveDirectoryAcceptsFlattenedResourcesLayout() throws {
