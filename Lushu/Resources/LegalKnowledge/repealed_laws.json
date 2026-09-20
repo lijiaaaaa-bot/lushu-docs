@@ -1,0 +1,225 @@
+[
+  {
+    "law_id": "民法通则",
+    "law_title": "中华人民共和国民法通则",
+    "aliases": [
+      "民法通则"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "总则",
+    "replaced_by_title": "中华人民共和国民法典",
+    "note": "民法典施行，民法通则同时废止。"
+  },
+  {
+    "law_id": "合同法",
+    "law_title": "中华人民共和国合同法",
+    "aliases": [
+      "合同法"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "合同编",
+    "replaced_by_title": "中华人民共和国民法典",
+    "note": "民法典施行，合同法同时废止。"
+  },
+  {
+    "law_id": "物权法",
+    "law_title": "中华人民共和国物权法",
+    "aliases": [
+      "物权法"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "物权编",
+    "replaced_by_title": "中华人民共和国民法典",
+    "note": "民法典施行，物权法同时废止。"
+  },
+  {
+    "law_id": "婚姻法",
+    "law_title": "中华人民共和国婚姻法",
+    "aliases": [
+      "婚姻法"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "婚姻家庭编",
+    "replaced_by_title": "中华人民共和国民法典",
+    "note": "民法典施行，婚姻法同时废止。"
+  },
+  {
+    "law_id": "继承法",
+    "law_title": "中华人民共和国继承法",
+    "aliases": [
+      "继承法"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "继承编",
+    "replaced_by_title": "中华人民共和国民法典",
+    "note": "民法典施行，继承法同时废止。"
+  },
+  {
+    "law_id": "侵权责任法",
+    "law_title": "中华人民共和国侵权责任法",
+    "aliases": [
+      "侵权责任法"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "侵权责任编",
+    "replaced_by_title": "中华人民共和国民法典",
+    "note": "民法典施行，侵权责任法同时废止。"
+  },
+  {
+    "law_id": "担保法",
+    "law_title": "中华人民共和国担保法",
+    "aliases": [
+      "担保法"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "最高人民法院关于适用《中华人民共和国民法典》有关担保制度的解释",
+    "replaced_by_title": "中华人民共和国民法典",
+    "note": "民法典施行，担保法同时废止。"
+  },
+  {
+    "law_id": "收养法",
+    "law_title": "中华人民共和国收养法",
+    "aliases": [
+      "收养法"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "婚姻家庭编",
+    "replaced_by_title": "中华人民共和国民法典",
+    "note": "民法典施行，收养法同时废止。"
+  },
+  {
+    "law_id": "民法通则意见",
+    "law_title": "最高人民法院关于贯彻执行《中华人民共和国民法通则》若干问题的意见（试行）",
+    "aliases": [
+      "民通意见",
+      "民法通则意见"
+    ],
+    "repealed_date": "2021-01-01",
+    "replaced_by_law_id": "最高人民法院关于适用《中华人民共和国民法典》总则编若干问题的解释",
+    "replaced_by_title": "最高人民法院关于适用《中华人民共和国民法典》总则编若干问题的解释",
+    "note": "民法典及相关司法解释施行后，民通意见不再适用。"
+  },
+  {
+    "law_id": "环境保护法",
+    "law_title": "中华人民共和国环境保护法",
+    "aliases": [
+      "环境保护法",
+      "环保法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，环境保护法同时废止。"
+  },
+  {
+    "law_id": "水污染防治法",
+    "law_title": "中华人民共和国水污染防治法",
+    "aliases": [
+      "水污染防治法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，水污染防治法同时废止。"
+  },
+  {
+    "law_id": "土壤污染防治法",
+    "law_title": "中华人民共和国土壤污染防治法",
+    "aliases": [
+      "土壤污染防治法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，土壤污染防治法同时废止。"
+  },
+  {
+    "law_id": "固体废物污染环境防治法",
+    "law_title": "中华人民共和国固体废物污染环境防治法",
+    "aliases": [
+      "固体废物污染环境防治法",
+      "固废法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，固体废物污染环境防治法同时废止。"
+  },
+  {
+    "law_id": "环境噪声污染防治法",
+    "law_title": "中华人民共和国环境噪声污染防治法",
+    "aliases": [
+      "环境噪声污染防治法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，环境噪声污染防治法（及嗣后的噪声污染防治法）同时废止；详见噪声污染防治法条目。"
+  },
+  {
+    "law_id": "放射性污染防治法",
+    "law_title": "中华人民共和国放射性污染防治法",
+    "aliases": [
+      "放射性污染防治法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，放射性污染防治法同时废止。"
+  },
+  {
+    "law_id": "噪声污染防治法",
+    "law_title": "中华人民共和国噪声污染防治法",
+    "aliases": [
+      "噪声污染防治法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，噪声污染防治法同时废止。"
+  },
+  {
+    "law_id": "大气污染防治法",
+    "law_title": "中华人民共和国大气污染防治法",
+    "aliases": [
+      "大气污染防治法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，大气污染防治法同时废止。"
+  },
+  {
+    "law_id": "海洋环境保护法",
+    "law_title": "中华人民共和国海洋环境保护法",
+    "aliases": [
+      "海洋环境保护法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，海洋环境保护法同时废止。"
+  },
+  {
+    "law_id": "清洁生产促进法",
+    "law_title": "中华人民共和国清洁生产促进法",
+    "aliases": [
+      "清洁生产促进法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，清洁生产促进法同时废止。"
+  },
+  {
+    "law_id": "环境影响评价法",
+    "law_title": "中华人民共和国环境影响评价法",
+    "aliases": [
+      "环境影响评价法"
+    ],
+    "repealed_date": "2026-08-15",
+    "replaced_by_law_id": "生态环境法典",
+    "replaced_by_title": "中华人民共和国生态环境法典",
+    "note": "生态环境法典施行，环境影响评价法同时废止。"
+  }
+]

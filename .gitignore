@@ -1,0 +1,31 @@
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# iCloud「材料」大体积原件（合同 / 审计）禁止入库
+**/合同.pdf
+**/*审计*.pdf
+Lushu/Resources/SampleCase/**/*.pdf
+
+# Secrets — never commit API keys / DeepSeek BYOK
+.env
+.env.*
+*.pem
+Secrets.plist
+**/Secrets.swift
+**/.deepseek*
+**/deepseek.key

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh-Hans</string>
+	<key>CFBundleDisplayName</key>
+	<string>律书</string>
+	<key>CFBundleName</key>
+	<string>律书</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>ATSApplicationFontsPath</key>
+	<string>Fonts</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>律书需要读取你选择的案匣或案件文件夹，以便列出材料并生成文书。</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>律书需要访问你指定的桌面文件夹，以便导入案件材料或导出文书。</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>律书需要访问下载文件夹，以便导入材料或保存导出的文书。</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.plain-text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>律书文书稿</string>
+			<key>UTTypeIdentifier</key>
+			<string>bot.lijiaaaaa.lushu.draft</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>lushu.md</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>
