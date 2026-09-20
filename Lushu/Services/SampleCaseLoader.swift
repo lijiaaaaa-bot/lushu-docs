@@ -14,18 +14,71 @@ enum SampleCaseLoader {
             .appendingPathComponent("Resources/SampleCase/haitian-parking", isDirectory: true)
     }
 
+    static let workbookResourceName = "2026年1月份到12月份阜外医院职工停车信息表"
+
     static func resolveDirectory() throws -> URL {
-        let candidates = [
-            Bundle.main.resourceURL?.appendingPathComponent("Resources/SampleCase/haitian-parking"),
-            Bundle.main.resourceURL?.appendingPathComponent("SampleCase/haitian-parking"),
-            Bundle.main.url(forResource: "2026年1月份到12月份阜外医院职工停车信息表", withExtension: "xlsx", subdirectory: "Resources/SampleCase/haitian-parking")?.deletingLastPathComponent(),
-            Bundle.main.url(forResource: "2026年1月份到12月份阜外医院职工停车信息表", withExtension: "xlsx", subdirectory: "SampleCase/haitian-parking")?.deletingLastPathComponent(),
-            developmentDirectory()
-        ]
-        for url in candidates.compactMap({ $0 }) {
+        try resolveDirectory(resourceURL: Bundle.main.resourceURL, bundle: .main)
+    }
+
+    /// 同时接受：`SampleCase/haitian-parking` 子目录，以及 Xcode 打成扁平 `Contents/Resources/*.xlsx`。
+    static func resolveDirectory(
+        resourceURL: URL?,
+        bundle: Bundle = .main,
+        includeDevelopmentFallback: Bool = true
+    ) throws -> URL {
+        for url in sampleDirectoryCandidates(
+            resourceURL: resourceURL,
+            bundle: bundle,
+            includeDevelopmentFallback: includeDevelopmentFallback
+        ) {
             if isSampleDirectory(url) { return url }
         }
         throw SampleCaseError.bundleMissing
+    }
+
+    static func sampleDirectoryCandidates(
+        resourceURL: URL?,
+        bundle: Bundle = .main,
+        includeDevelopmentFallback: Bool = true
+    ) -> [URL] {
+        var candidates: [URL] = []
+        if let resourceURL {
+            candidates.append(contentsOf: [
+                resourceURL.appendingPathComponent("Resources/SampleCase/haitian-parking", isDirectory: true),
+                resourceURL.appendingPathComponent("SampleCase/haitian-parking", isDirectory: true),
+                resourceURL.appendingPathComponent("haitian-parking", isDirectory: true),
+                resourceURL
+            ])
+        }
+
+        let nested = [
+            "Resources/SampleCase/haitian-parking",
+            "SampleCase/haitian-parking",
+            "haitian-parking"
+        ]
+        for subdirectory in nested {
+            if let file = bundle.url(
+                forResource: workbookResourceName,
+                withExtension: "xlsx",
+                subdirectory: subdirectory
+            ) {
+                candidates.append(file.deletingLastPathComponent())
+            }
+        }
+        if let flat = bundle.url(forResource: workbookResourceName, withExtension: "xlsx") {
+            candidates.append(flat.deletingLastPathComponent())
+        }
+        if includeDevelopmentFallback {
+            candidates.append(developmentDirectory())
+        }
+
+        var seen = Set<String>()
+        return candidates.filter { url in
+            let path = url.standardizedFileURL.path
+            guard !seen.contains(path) else { return false }
+            seen.insert(path)
+            return true
+        }
     }
 
     static func isSampleDirectory(_ url: URL) -> Bool {
@@ -179,7 +232,7 @@ enum SampleCaseError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .bundleMissing:
-            return "未找到 Resources/SampleCase/haitian-parking。可改选 iCloud Drive「材料」。"
+            return "未找到示例案件材料（扁平 Resources 或 SampleCase/haitian-parking）。可改选 iCloud Drive「材料」。"
         }
     }
 }

@@ -15,6 +15,7 @@ struct HomePillButton: View {
     let title: String
     var kind: HomePillKind = .primary
     var enabled: Bool = true
+    var identifier: String? = nil
     var action: () -> Void
 
     var body: some View {
@@ -34,6 +35,7 @@ struct HomePillButton: View {
         .buttonStyle(.plain)
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.4)
+        .identified(identifier)
     }
 }
 
@@ -41,6 +43,7 @@ struct HomePillButton: View {
 struct HomeActionChip: View {
     let title: String
     var systemImage: String
+    var identifier: String? = nil
     var action: () -> Void
 
     var body: some View {
@@ -62,12 +65,14 @@ struct HomeActionChip: View {
             )
         }
         .buttonStyle(.plain)
+        .identified(identifier)
     }
 }
 
 /// 空态示例提示：可点的圆角胶囊，可换行排布。
 struct HomePromptChip: View {
     let title: String
+    var identifier: String? = nil
     var action: () -> Void
 
     var body: some View {
@@ -85,6 +90,18 @@ struct HomePromptChip: View {
                 )
         }
         .buttonStyle(.plain)
+        .identified(identifier)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func identified(_ identifier: String?) -> some View {
+        if let identifier, !identifier.isEmpty {
+            accessibilityIdentifier(identifier)
+        } else {
+            self
+        }
     }
 }
 

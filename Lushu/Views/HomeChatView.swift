@@ -79,7 +79,7 @@ struct HomeChatView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             FlowRow(spacing: 8, lineSpacing: 8) {
-                HomePromptChip(title: "海天乙方电费+停车费报告") {
+                HomePromptChip(title: "海天乙方电费+停车费报告", identifier: "home.haitianChip") {
                     appState.useHaitianPromptChip()
                 }
                 HomePromptChip(title: "只写材料总结要点") {
@@ -100,7 +100,7 @@ struct HomeChatView: View {
                     .foregroundStyle(Theme.mute)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
-                    HomePillButton(title: "生成文书", kind: .primary) {
+                    HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
                         appState.generateFromHome()
                     }
                     HomePillButton(title: "进入工作区", kind: .secondary) {
@@ -131,7 +131,7 @@ struct HomeChatView: View {
                 HomeActionChip(title: "导入", systemImage: "square.and.arrow.down") {
                     appState.importFiles()
                 }
-                HomeActionChip(title: "示例", systemImage: "doc.text") {
+                HomeActionChip(title: "示例", systemImage: "doc.text", identifier: "home.sample") {
                     appState.loadSamples(enterWorkspace: false)
                 }
                 HomeActionChip(title: "设置", systemImage: "gearshape") {
@@ -165,7 +165,7 @@ struct HomeChatView: View {
 
             if appState.canGenerateFromHome {
                 HStack(spacing: 8) {
-                    HomePillButton(title: "生成文书", kind: .primary) {
+                    HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
                         appState.generateFromHome()
                     }
                     HomePillButton(title: "进入工作区", kind: .secondary) {

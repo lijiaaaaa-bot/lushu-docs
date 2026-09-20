@@ -48,6 +48,49 @@ final class SampleCaseTests: XCTestCase {
         XCTAssertFalse(extract.hasPrefix("已定位材料："))
     }
 
+    func testResolveDirectoryAcceptsFlattenedResourcesLayout() throws {
+        let source = SampleCaseLoader.developmentDirectory()
+        XCTAssertTrue(SampleCaseLoader.isSampleDirectory(source))
+
+        let flat = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LushuFlatResources-\(UUID().uuidString)", isDirectory: true)
+        let nestedRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LushuNestedResources-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: flat)
+            try? FileManager.default.removeItem(at: nestedRoot)
+        }
+        try FileManager.default.createDirectory(at: flat, withIntermediateDirectories: true)
+        let nested = nestedRoot.appendingPathComponent("SampleCase/haitian-parking", isDirectory: true)
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+
+        let files = try FileManager.default.contentsOfDirectory(at: source, includingPropertiesForKeys: nil)
+            .filter {
+                let ext = $0.pathExtension.lowercased()
+                return ext == "xlsx" || ext == "docx"
+            }
+        XCTAssertGreaterThanOrEqual(files.filter { $0.pathExtension.lowercased() == "xlsx" }.count, 5)
+        XCTAssertGreaterThanOrEqual(files.filter { $0.pathExtension.lowercased() == "docx" }.count, 1)
+        for file in files {
+            try FileManager.default.copyItem(at: file, to: flat.appendingPathComponent(file.lastPathComponent))
+            try FileManager.default.copyItem(at: file, to: nested.appendingPathComponent(file.lastPathComponent))
+        }
+
+        let resolvedFlat = try SampleCaseLoader.resolveDirectory(
+            resourceURL: flat,
+            includeDevelopmentFallback: false
+        )
+        XCTAssertTrue(SampleCaseLoader.isSampleDirectory(resolvedFlat))
+        XCTAssertEqual(resolvedFlat.standardizedFileURL.path, flat.standardizedFileURL.path)
+
+        let resolvedNested = try SampleCaseLoader.resolveDirectory(
+            resourceURL: nestedRoot,
+            includeDevelopmentFallback: false
+        )
+        XCTAssertTrue(SampleCaseLoader.isSampleDirectory(resolvedNested))
+        XCTAssertEqual(resolvedNested.standardizedFileURL.path, nested.standardizedFileURL.path)
+    }
+
     func testDocxExtractorMatchesFileAndDoesNotInvent() throws {
         let directory = try SampleCaseLoader.resolveDirectory()
         let docx = try XCTUnwrap(

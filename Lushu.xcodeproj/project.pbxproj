@@ -30,6 +30,7 @@
 			explicitFileTypes = {
 			};
 			explicitFolders = (
+				Resources/SampleCase,
 			);
 			path = Lushu;
 			sourceTree = "<group>";
