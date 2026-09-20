@@ -69,9 +69,16 @@ struct CasePackStore {
     }
 
     func writeDraft(_ pack: CasePack, draft: DraftDocument) throws {
-        let dest = subdirectory(pack, CasePackLayout.drafts)
-            .appendingPathComponent("\(draft.kind.rawValue).md")
-        try draft.markdown.write(to: dest, atomically: true, encoding: .utf8)
+        try draft.markdown.write(to: draftMarkdownURL(pack, draft: draft), atomically: true, encoding: .utf8)
+        try DOCXDocumentWriter.write(draft, to: draftDOCXURL(pack, draft: draft))
+    }
+
+    func draftMarkdownURL(_ pack: CasePack, draft: DraftDocument) -> URL {
+        subdirectory(pack, CasePackLayout.drafts).appendingPathComponent("\(draft.kind.rawValue).md")
+    }
+
+    func draftDOCXURL(_ pack: CasePack, draft: DraftDocument) -> URL {
+        subdirectory(pack, CasePackLayout.drafts).appendingPathComponent("\(draft.kind.rawValue).docx")
     }
 
     func writeBriefChat(_ pack: CasePack, chat: CaseBriefChat) throws {

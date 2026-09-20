@@ -142,7 +142,6 @@ final class AppState: ObservableObject {
                 revealWorkspace()
             } else {
                 showOnboarding = true
-                appendHomeAssistant(attachmentConfirmation(for: sample) + "\n可点「生成文书」按任务卡落稿，或继续改要点。")
             }
             briefComposerText = ""
             flash("已挂上示例子集：\(sample.title)。完整原件在 iCloud Drive「材料」。")
@@ -153,17 +152,17 @@ final class AppState: ObservableObject {
 
     func chooseAnxiaFolder() {
         flash("请选取 iCloud Drive「\(SampleCaseLoader.iCloudFolderName)」：\(SampleCaseLoader.iCloudPath)。完整原件含合同.pdf 与审计件（未入库）。系统选文件夹下一轮接入。")
-        appendHomeAssistant("请选取 iCloud Drive「材料」：\(SampleCaseLoader.iCloudPath)。本轮系统选文件夹未接线。可先「载入示例案件」挂上 5 份停车表与照明测算。合同.pdf / 审计件不入库。")
+        appendHomeAssistant("选文件夹下一轮接入。可先点「示例」。")
     }
 
     func importFiles() {
         flash("可从 iCloud Drive「材料」导入文件。系统多选下一轮接入。大体积合同.pdf / 审计件不要提交进仓库。")
-        appendHomeAssistant("导入文件下一轮接入系统多选。大体积合同.pdf / 审计件不要提交进仓库。可先「载入示例案件」。")
+        appendHomeAssistant("导入下一轮接入。可先点「示例」。")
     }
 
     func importFolder() {
         flash("请选取 iCloud Drive「材料」文件夹。系统选文件夹下一轮接入。")
-        appendHomeAssistant("请选取 iCloud Drive「材料」文件夹。系统选文件夹下一轮接入。")
+        appendHomeAssistant("选文件夹下一轮接入。可先点「示例」。")
     }
 
     func selectSource(_ id: CaseSource.ID) {
@@ -289,11 +288,30 @@ final class AppState: ObservableObject {
     }
 
     func exportDocument() {
-        if currentDraft.isBlank {
-            flash("请先成文书，再导出。")
+        downloadGeneratedDocument()
+    }
+
+    func downloadGeneratedDocument() {
+        guard let source = selectedSource, let draft = drafts[source.id], !draft.isBlank else {
+            flash("还没有可下载的文书。")
             return
         }
-        showExportSheet = true
+        do {
+            try packStore.writeDraft(source.pack, draft: draft)
+            try DocumentExport.saveUserCopy(
+                docx: packStore.draftDOCXURL(source.pack, draft: draft),
+                markdown: packStore.draftMarkdownURL(source.pack, draft: draft),
+                draft: draft
+            )
+            flash("已提供下载。草稿仍在案件包 drafts/。")
+        } catch {
+            flash(error.localizedDescription)
+        }
+    }
+
+    var hasGeneratedDraft: Bool {
+        guard selectedSourceID != nil else { return false }
+        return !currentDraft.isBlank
     }
 
     func openStructuredWorkbook(_ item: MaterialItem) {
@@ -416,18 +434,14 @@ final class AppState: ObservableObject {
             return
         }
         var chat = briefChats[Self.homeInboxID] ?? CaseBriefChat(caseID: Self.homeInboxID)
-        chat.messages.append(BriefChatMessage(role: .user, text: incoming))
         chat.card = BriefCardParser.parse(incoming, caseID: Self.homeInboxID, existing: chat.card)
+        chat.messages.append(BriefChatMessage(role: .user, text: BriefCardParser.shortUserPreview(incoming, card: chat.card)))
         chat.messages.append(
-            BriefChatMessage(
-                role: .assistant,
-                text: BriefCardParser.acknowledge(chat.card) + "\n尚未挂上 CasePack。请点「选材料文件夹」或「载入示例案件」。生成只吃结构化材料。"
-            )
+            BriefChatMessage(role: .assistant, text: BriefCardParser.shortAcknowledge(chat.card))
         )
         briefChats[Self.homeInboxID] = chat
         briefComposerText = ""
         flash("已记下要点。请挂上案件材料。")
-        offerOrRunLLMReply(caseID: Self.homeInboxID, card: chat.card, grounded: chat.messages.last?.text ?? "")
     }
 
     func updateBriefCard(revealWorkspace: Bool = false) {
@@ -437,25 +451,26 @@ final class AppState: ObservableObject {
         }
         var chat = briefChats[source.id] ?? CaseBriefChat(caseID: source.id)
         let incoming = briefComposerText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sourceText = incoming.isEmpty ? (chat.messages.last(where: { $0.role == .user })?.text ?? chat.card.sourceMessage) : incoming
+        let sourceText = incoming.isEmpty ? chat.card.sourceMessage : incoming
         guard !sourceText.isEmpty else {
             flash("先写入长要点，再更新任务卡。")
             return
         }
         if !incoming.isEmpty {
-            chat.messages.append(BriefChatMessage(role: .user, text: incoming))
+            chat.card = BriefCardParser.parse(incoming, caseID: source.id, existing: chat.card)
+            chat.messages.append(BriefChatMessage(role: .user, text: BriefCardParser.shortUserPreview(incoming, card: chat.card)))
             briefComposerText = ""
+        } else {
+            chat.card = BriefCardParser.parse(sourceText, caseID: source.id, existing: chat.card)
         }
         let inputs = structuredInputs(for: source)
-        chat.card = BriefCardParser.parse(sourceText, caseID: source.id, existing: chat.card)
-        chat.messages.append(BriefChatMessage(role: .assistant, text: BriefCardParser.acknowledge(chat.card, inputs: inputs)))
+        chat.messages.append(BriefChatMessage(role: .assistant, text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs)))
         briefChats[source.id] = chat
         try? packStore.writeBriefChat(source.pack, chat: chat)
         if revealWorkspace {
             setWorkstation(.document)
         }
         flash("任务卡已更新。生成仍只吃结构化材料。")
-        offerOrRunLLMReply(caseID: source.id, card: chat.card, grounded: chat.messages.last?.text ?? "")
     }
 
     func generateFromBrief() {
@@ -474,9 +489,8 @@ final class AppState: ObservableObject {
             selectedKind = .customReport
         }
         do {
-            try generateFromStructuredInputs()
+            try generateFromStructuredInputs(announceDownload: true)
             maybePolishAfterGenerate()
-            revealWorkspace()
         } catch let error as DocumentGenerationError {
             flash(error.localizedDescription)
             if case .unstructuredInputsRejected = error {
@@ -528,7 +542,7 @@ final class AppState: ObservableObject {
         )
     }
 
-    private func generateFromStructuredInputs() throws {
+    private func generateFromStructuredInputs(announceDownload: Bool = false) throws {
         guard let source = selectedSource else {
             throw DocumentGenerationError.unstructuredInputsRejected
         }
@@ -537,16 +551,13 @@ final class AppState: ObservableObject {
         let draft = try generator.generate(kind: selectedKind, inputs: inputs, brief: brief)
         drafts[source.id] = draft
         try? packStore.writeDraft(source.pack, draft: draft)
-        if let chat = briefChats[source.id] {
-            try? packStore.writeBriefChat(source.pack, chat: chat)
-            var updated = chat
-            updated.messages.append(
-                BriefChatMessage(
-                    role: .assistant,
-                    text: "已按本案件任务卡落稿《\(draft.title)》。数字只来自真表/已定位文本；缺口已写入「待补材料与缺口」。未写法条。"
-                )
+        if announceDownload {
+            appendAssistant(
+                "已生成\(selectedKind.title) · 点此下载",
+                to: source.id,
+                action: .downloadDraft
             )
-            briefChats[source.id] = updated
+            showOnboarding = true
         }
         previewMode = true
         focus = .manuscript
@@ -561,8 +572,8 @@ final class AppState: ObservableObject {
         let inputs = structuredInputs(for: source)
         chat.card = BriefCardParser.parse(text, caseID: source.id)
         chat.messages = [
-            BriefChatMessage(role: .user, text: text),
-            BriefChatMessage(role: .assistant, text: BriefCardParser.acknowledge(chat.card, inputs: inputs))
+            BriefChatMessage(role: .user, text: BriefCardParser.shortUserPreview(text, card: chat.card)),
+            BriefChatMessage(role: .assistant, text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs))
         ]
         briefChats[source.id] = chat
         try? packStore.writeBriefChat(source.pack, chat: chat)
@@ -578,6 +589,16 @@ final class AppState: ObservableObject {
                 ? (inbox.messages.last(where: { $0.role == .user })?.text ?? SampleCaseLoader.exampleBrief())
                 : inbox.card.sourceMessage
             chat.card = BriefCardParser.parse(raw, caseID: source.id)
+            let inputs = structuredInputs(for: source)
+            chat.messages = chat.messages.map { message in
+                if message.role == .user, message.text.count > 40 {
+                    return BriefChatMessage(id: message.id, role: .user, text: BriefCardParser.shortUserPreview(message.text, card: chat.card), createdAt: message.createdAt, action: message.action)
+                }
+                return message
+            }
+            chat.messages.append(
+                BriefChatMessage(role: .assistant, text: BriefCardParser.shortAcknowledge(chat.card, inputs: inputs))
+            )
             briefChats[source.id] = chat
             briefChats[Self.homeInboxID] = CaseBriefChat(caseID: Self.homeInboxID)
             try? packStore.writeBriefChat(source.pack, chat: chat)
@@ -587,59 +608,23 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func attachmentConfirmation(for source: CaseSource) -> String {
-        let tables = source.materials.filter { $0.tableStatus == .realWorkbook }.count
-        let texts = source.locatedTexts.count
-        return "已挂上「\(source.title)」。真表 \(tables) 份，已定位文本 \(texts) 块。\(source.locationCaption)。"
-    }
-
     private func appendHomeAssistant(_ text: String) {
         appendAssistant(text, to: selectedSourceID ?? Self.homeInboxID)
     }
 
-    private func appendAssistant(_ text: String, to caseID: UUID) {
+    private func appendAssistant(_ text: String, to caseID: UUID, action: BriefChatAction? = nil) {
         var chat = briefChats[caseID] ?? CaseBriefChat(caseID: caseID)
-        chat.messages.append(BriefChatMessage(role: .assistant, text: text))
+        chat.messages.append(BriefChatMessage(role: .assistant, text: text, action: action))
         briefChats[caseID] = chat
         if let source = sources.first(where: { $0.id == caseID }) {
             try? packStore.writeBriefChat(source.pack, chat: chat)
         }
     }
 
-    private func offerOrRunLLMReply(caseID: UUID, card: BriefCard, grounded: String) {
-        refreshDeepSeekKeyStatus()
-        guard hasDeepSeekKey, let key = try? APIKeyStore.readDeepSeekKey(), !key.isEmpty else {
-            appendMissingKeyHintIfNeeded(to: caseID)
-            return
-        }
-        Task {
-            do {
-                let text = try await DeepSeekClient().complete(
-                    messages: GroundedLLM.replyMessages(card: card, grounded: grounded),
-                    key: key
-                )
-                appendAssistant(text, to: caseID)
-            } catch {
-                appendAssistant(error.localizedDescription, to: caseID)
-            }
-        }
-    }
-
     private func maybePolishAfterGenerate() {
         refreshDeepSeekKeyStatus()
-        if hasDeepSeekKey {
-            requestLLMPolish()
-        } else if let id = selectedSourceID {
-            appendMissingKeyHintIfNeeded(to: id)
-        }
-    }
-
-    private func appendMissingKeyHintIfNeeded(to caseID: UUID) {
-        let alreadyShown = briefChats[caseID]?.messages.contains {
-            $0.role == .assistant && $0.text == GroundedLLM.missingKeyHint
-        } == true
-        guard !alreadyShown else { return }
-        appendAssistant(GroundedLLM.missingKeyHint, to: caseID)
+        guard hasDeepSeekKey else { return }
+        requestLLMPolish()
     }
 
     private func applyPolishedMarkdown(_ markdown: String, to sourceID: UUID) {

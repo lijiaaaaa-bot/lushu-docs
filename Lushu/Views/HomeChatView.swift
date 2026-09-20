@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 首页：豆包式栏位与按钮密度，案匣 paper / walnut / brass，衬线「律书」。
+/// 首页：豆包式短对话。长任务卡 / 真表 / 报告正文进工作区。
 struct HomeChatView: View {
     @EnvironmentObject private var appState: AppState
 
@@ -28,8 +28,11 @@ struct HomeChatView: View {
                 ForEach(appState.homeMessages) { message in
                     BriefPaperCard(message: message)
                 }
-                if appState.canGenerateFromHome {
-                    generateOffer
+                if let source = appState.selectedSource, !source.materials.isEmpty {
+                    materialList(source.materials)
+                }
+                if appState.canGenerateFromHome || appState.hasGeneratedDraft {
+                    actionPills
                 }
             }
         }
@@ -58,25 +61,15 @@ struct HomeChatView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 18) {
-            Text("把长要点贴进来，挂上案件材料，再写成文书。")
+        VStack(spacing: 16) {
+            Text("把要点贴进来，挂上材料，再生成下载。")
                 .font(Theme.serifBody(17))
                 .foregroundStyle(Theme.ink)
                 .multilineTextAlignment(.center)
-            Text(appState.hasDeepSeekKey
-                 ? "DeepSeek 已保存 \(appState.maskedDeepSeekKey ?? "密钥")。可选回执与润色走 chat/completions，思考链关闭。"
-                 : "未保存 DeepSeek 密钥。任务卡解析与本地落稿仍可用；模型回执与润色请到设置粘贴密钥，不会编造内容。")
+            Text("不编法条，不估台账数字。任务卡与报告正文在工作区。")
                 .font(Theme.serifBody(13))
                 .foregroundStyle(Theme.mute)
                 .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            Text("用法像对话，不是通用闲聊。只服务当前要写的材料总结 / 专项报告。不编法条，不估台账数字。")
-                .font(Theme.serifBody(14))
-                .foregroundStyle(Theme.mute)
-                .multilineTextAlignment(.center)
-                .lineSpacing(4)
-                .frame(maxWidth: 480)
-                .fixedSize(horizontal: false, vertical: true)
 
             FlowRow(spacing: 8, lineSpacing: 8) {
                 HomePromptChip(title: "海天乙方电费+停车费报告", identifier: "home.haitianChip") {
@@ -87,37 +80,62 @@ struct HomeChatView: View {
                 }
             }
         }
-        .padding(.top, 64)
+        .padding(.top, 72)
         .padding(.bottom, 28)
         .frame(maxWidth: .infinity)
     }
 
-    private var generateOffer: some View {
-        HStack(alignment: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("材料与任务卡已齐。可按结构化案件包落稿。")
-                    .font(Theme.serifBody(13))
-                    .foregroundStyle(Theme.mute)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 8) {
-                    HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
-                        appState.generateFromHome()
+    private func materialList(_ materials: [MaterialItem]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("材料")
+                .font(Theme.caption(11))
+                .foregroundStyle(Theme.mute)
+            ForEach(materials) { item in
+                Button {
+                    appState.revealWorkspace()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(shortMaterialName(item.filename))
+                            .font(Theme.serifBody(13))
+                            .foregroundStyle(Theme.ink)
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(item.statusLabel)
+                            .font(Theme.caption(11))
+                            .foregroundStyle(Theme.walnut)
                     }
-                    HomePillButton(title: "进入工作区", kind: .secondary) {
-                        appState.revealWorkspace()
-                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.card)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Theme.walnut.opacity(0.18), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: 420, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var actionPills: some View {
+        HStack(spacing: 8) {
+            if appState.canGenerateFromHome {
+                HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
+                    appState.generateFromHome()
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Theme.paper)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
-            )
-            .frame(maxWidth: 520, alignment: .leading)
-            Spacer(minLength: 72)
+            if appState.hasGeneratedDraft {
+                HomePillButton(title: "下载", kind: .primary) {
+                    appState.downloadGeneratedDocument()
+                }
+            }
+            HomePillButton(title: "工作区", kind: .secondary) {
+                appState.revealWorkspace()
+            }
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -163,13 +181,17 @@ struct HomeChatView: View {
                     .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
             )
 
-            if appState.canGenerateFromHome {
+            if appState.canGenerateFromHome || appState.hasGeneratedDraft {
                 HStack(spacing: 8) {
-                    HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
-                        appState.generateFromHome()
+                    if appState.canGenerateFromHome {
+                        HomePillButton(title: "生成文书", kind: .primary, identifier: "home.generate") {
+                            appState.generateFromHome()
+                        }
                     }
-                    HomePillButton(title: "进入工作区", kind: .secondary) {
-                        appState.revealWorkspace()
+                    if appState.hasGeneratedDraft {
+                        HomePillButton(title: "下载", kind: .primary) {
+                            appState.downloadGeneratedDocument()
+                        }
                     }
                 }
             }
@@ -201,9 +223,9 @@ struct HomeChatView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 2)
                 .tint(Theme.walnut)
-                .frame(minHeight: 40, maxHeight: 120)
+                .frame(minHeight: 40, maxHeight: 88)
             if appState.briefComposerText.isEmpty {
-                Text("粘贴本案件长要点，如海天停车费与电费报告需求…")
+                Text("粘贴本案件要点…")
                     .font(Theme.serifBody(14))
                     .foregroundStyle(Theme.mute)
                     .padding(.horizontal, 8)
@@ -211,6 +233,17 @@ struct HomeChatView: View {
                     .allowsHitTesting(false)
             }
         }
+    }
+
+    private func shortMaterialName(_ filename: String) -> String {
+        if filename.contains("停车"), let year = BriefCardParser.year(in: filename) {
+            return "\(year)年停车表"
+        }
+        if filename.contains("照明") || filename.contains("用电") {
+            return "照明测算"
+        }
+        if filename.count <= 16 { return filename }
+        return String(filename.prefix(14)) + "…"
     }
 }
 

@@ -18,6 +18,17 @@ final class BriefCardTests: XCTestCase {
         XCTAssertFalse(card.calculationRules.isEmpty)
         XCTAssertTrue(card.chips.contains("乙方"))
         XCTAssertTrue(card.chips.contains(where: { $0.contains("电价P") }))
+        XCTAssertEqual(card.requiredSections.filter { $0.contains("停车") }.count, 1)
+        XCTAssertEqual(card.requiredSections.filter { $0.contains("计算") }.count, 1)
+        XCTAssertEqual(card.requiredSections.count, 5)
+        XCTAssertFalse(card.requiredSections.contains(where: { $0.contains("以下") }))
+        XCTAssertFalse(card.requiredSections.contains(where: { $0.count > 24 }))
+        let preview = BriefCardParser.shortUserPreview(SampleCaseLoader.embeddedExampleBrief, card: card)
+        XCTAssertTrue(preview.count < 80)
+        XCTAssertFalse(preview.contains("计算规则"))
+        let ack = BriefCardParser.shortAcknowledge(card)
+        XCTAssertTrue(ack.contains("缺"))
+        XCTAssertTrue(ack.count < 80)
     }
 
     func testYearGapsDoNotInventMissingLedgers() {
@@ -73,6 +84,30 @@ final class BriefCardTests: XCTestCase {
         XCTAssertFalse(body.contains("根据刑法"))
         XCTAssertFalse(body.contains("0.85元"))
         XCTAssertFalse(body.contains("行业经验"))
+
+        let headings = draft.sections.map(\.heading)
+        XCTAssertEqual(headings.filter { $0.contains("停车") }.count, 1)
+        XCTAssertEqual(headings.filter { $0.contains("计算") }.count, 1)
+        XCTAssertEqual(headings.filter { $0.contains("照明") || $0.contains("用电") }.count, 1)
+    }
+
+    func testDOCXExportContainsTitleNotInventedStatutes() throws {
+        let brief = BriefCardParser.parse(SampleCaseLoader.embeddedExampleBrief, caseID: UUID())
+        let inputs = StructuredCaseInputs(
+            caseTitle: "海天×阜外停车场费用材料",
+            metadata: [:],
+            tables: [tableRef("2022年1月份到12月份阜外医院职工停车信息表.xlsx")],
+            texts: []
+        )
+        let draft = try DocumentGenerator().generate(kind: .customReport, inputs: inputs, brief: brief)
+        let dest = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LushuDraft-\(UUID().uuidString).docx")
+        defer { try? FileManager.default.removeItem(at: dest) }
+        try DOCXDocumentWriter.write(draft, to: dest)
+        XCTAssertTrue(ZipArchive.hasEntry(named: "word/document.xml", in: dest))
+        let xml = String(data: try ZipArchive.data(named: "word/document.xml", in: dest), encoding: .utf8) ?? ""
+        XCTAssertTrue(xml.contains("海天"))
+        XCTAssertFalse(xml.contains("根据刑法"))
     }
 
     func testChatIsCaseBound() {

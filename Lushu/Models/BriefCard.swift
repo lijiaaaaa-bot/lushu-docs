@@ -74,17 +74,29 @@ enum BriefChatRole: String, Codable, Hashable {
     case assistant
 }
 
+enum BriefChatAction: String, Codable, Hashable {
+    case downloadDraft
+}
+
 struct BriefChatMessage: Identifiable, Hashable, Codable {
     var id: UUID
     var role: BriefChatRole
     var text: String
     var createdAt: Date
+    var action: BriefChatAction?
 
-    init(id: UUID = UUID(), role: BriefChatRole, text: String, createdAt: Date = Date()) {
+    init(
+        id: UUID = UUID(),
+        role: BriefChatRole,
+        text: String,
+        createdAt: Date = Date(),
+        action: BriefChatAction? = nil
+    ) {
         self.id = id
         self.role = role
         self.text = text
         self.createdAt = createdAt
+        self.action = action
     }
 }
 

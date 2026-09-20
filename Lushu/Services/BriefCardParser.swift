@@ -20,31 +20,39 @@ enum BriefCardParser {
         return card
     }
 
-    static func acknowledge(_ card: BriefCard, inputs: StructuredCaseInputs? = nil) -> String {
-        var lines: [String] = [
-            "已更新本案件任务卡（不是通用问答）。",
-            "立场：\(card.stance.title)。",
-            "目的：\(card.documentPurpose.isEmpty ? "未写明" : card.documentPurpose)。",
-            "年份/范围：\(card.yearsScope.isEmpty ? "未写明" : card.yearsScope)。"
-        ]
-        if !card.requiredSections.isEmpty {
-            lines.append("章节：\(card.requiredSections.joined(separator: "、"))。")
+    /// 首页用户气泡：一句话摘要，不贴长任务卡。
+    static func shortUserPreview(_ raw: String, card: BriefCard? = nil) -> String {
+        if let card, card.isActionable {
+            var parts = [card.stance.title]
+            if !card.yearsScope.isEmpty { parts.append(card.yearsScope) }
+            if !card.documentPurpose.isEmpty { parts.append(card.documentPurpose) }
+            let joined = parts.joined(separator: " · ")
+            if joined.count > 4 { return joined }
         }
-        if !card.calculationRules.isEmpty {
-            lines.append("计算口径只采用你写下的规则，律书不另推公式。")
-        }
+        let first = raw.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty } ?? raw
+        if first.count <= 40 { return first }
+        return String(first.prefix(38)).trimmingCharacters(in: .whitespaces) + "…"
+    }
+
+    /// 首页助手气泡：短确认。任务卡全文进工作区。
+    static func shortAcknowledge(_ card: BriefCard, inputs: StructuredCaseInputs? = nil) -> String {
+        let tables = inputs?.tables.count ?? 0
         var gaps = card.missingFacts
         if let inputs {
             gaps.append(contentsOf: yearGaps(requested: card.yearsScope, tables: inputs.tables))
         }
         gaps = unique(gaps)
-        if gaps.isEmpty {
-            lines.append("任务卡未点名缺数。生成时仍只填结构化材料里已有的原文/真表，缺则列缺口。")
-        } else {
-            lines.append("已登记缺口（不得编造）：\(gaps.joined(separator: "、"))。")
+        let gapText = gaps.isEmpty ? "缺口未点名" : "缺 \(gaps.prefix(4).joined(separator: "、"))"
+        if tables == 0 {
+            return "已记下\(card.stance.title)要点。尚未挂材料。\(gapText)。"
         }
-        lines.append("点「生成文书」将按任务卡组装章节；不会写入未校验法条，也不会估 电价P 或台账金额。")
-        return lines.joined(separator: "\n")
+        return "已挂材料 \(tables) 份真表。\(gapText)。可生成。"
+    }
+
+    static func acknowledge(_ card: BriefCard, inputs: StructuredCaseInputs? = nil) -> String {
+        shortAcknowledge(card, inputs: inputs)
     }
 
     static func yearGaps(requested: String, tables: [StructuredTableRef]) -> [String] {
@@ -112,9 +120,32 @@ enum BriefCardParser {
     }
 
     private static func sections(in text: String) -> [String] {
-        if let block = labeledBlock(in: text, headings: ["请包含以下部分", "请包含", "章节"]) {
-            let items = listItems(in: block)
-            if !items.isEmpty { return items }
+        if let start = text.range(of: "请包含") {
+            var rest = String(text[start.upperBound...])
+            if let colon = rest.range(of: "：") ?? rest.range(of: ":"),
+               !rest[..<colon.lowerBound].contains(where: \.isNewline) {
+                rest = String(rest[colon.upperBound...])
+            }
+            var items: [String] = []
+            for line in rest.components(separatedBy: .newlines) {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.contains("计算规则") || trimmed.contains("额外约束") || trimmed.hasPrefix("约束") {
+                    break
+                }
+                if trimmed.isEmpty {
+                    if !items.isEmpty { break }
+                    continue
+                }
+                var item = trimmed.replacingOccurrences(of: #"^[\-\*\d\.、）)\s]+"#, with: "", options: .regularExpression)
+                item = item.trimmingCharacters(in: .whitespacesAndNewlines)
+                if item.count >= 2 && item.count < 24 {
+                    items.append(item)
+                } else if !items.isEmpty {
+                    break
+                }
+            }
+            let cleaned = unique(items)
+            if !cleaned.isEmpty { return cleaned }
         }
         var found: [String] = []
         let candidates = ["立场与范围", "停车费", "照明用电测算", "计算口径", "待补材料", "案件概要", "事实要点"]

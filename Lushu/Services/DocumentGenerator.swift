@@ -58,13 +58,14 @@ struct DocumentGenerator {
     private func briefDriven(kind: DocumentKind, inputs: StructuredCaseInputs, brief: BriefCard) -> DraftDocument {
         let titleSuffix = kind == .customReport ? "专项报告" : "材料总结"
         let purpose = brief.documentPurpose.isEmpty ? titleSuffix : brief.documentPurpose
-        var headings = brief.requiredSections
+        var headings = uniqueHeadings(brief.requiredSections)
         if headings.isEmpty {
             headings = defaultSummarySections(inputs).map(\.heading)
         }
         if !headings.contains(where: { $0.contains("缺口") || $0.contains("待补") }) {
             headings.append("待补材料与缺口")
         }
+        headings = uniqueHeadings(headings)
 
         var draft = DraftDocument.blankSummary(caseTitle: inputs.caseTitle)
         draft.kind = kind
@@ -224,16 +225,31 @@ struct DocumentGenerator {
         return inputs.texts.map { "· \($0.text)" }.joined(separator: "\n")
     }
 
+    private func uniqueHeadings(_ headings: [String]) -> [String] {
+        var seen = Set<String>()
+        var out: [String] = []
+        for heading in headings {
+            let key = sectionKey(heading)
+            if seen.insert(key).inserted {
+                out.append(heading)
+            }
+        }
+        return out
+    }
+
+    private func sectionKey(_ heading: String) -> String {
+        if heading.contains("停车") { return "停车" }
+        if heading.contains("照明") || heading.contains("用电") || heading.contains("电费") { return "照明" }
+        if heading.contains("计算") { return "计算" }
+        if heading.contains("缺口") || heading.contains("待补") || heading.contains("待办") { return "缺口" }
+        if heading.contains("立场") || heading.contains("范围") || heading.contains("概要") { return "立场" }
+        if heading.contains("清单") { return "清单" }
+        if heading.contains("事实") { return "事实" }
+        return heading
+    }
+
     private func groundedFallback(heading: String, inputs: StructuredCaseInputs) -> String {
-        var lines = ["「\(heading)」只根据结构化材料填写。"]
-        if !inputs.tables.isEmpty {
-            lines.append(materialList(inputs))
-        }
-        if !inputs.texts.isEmpty {
-            lines.append(facts(inputs))
-        }
-        lines.append("没有对应原文或真表的部分留空，见缺口。")
-        return lines.joined(separator: "\n")
+        "「\(heading)」只根据结构化材料填写。没有对应原文或真表的部分留空，见缺口。真表 \(inputs.tables.count) 份。"
     }
 
     private func genericGaps(_ inputs: StructuredCaseInputs) -> String {
