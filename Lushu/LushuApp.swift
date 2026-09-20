@@ -23,7 +23,8 @@ struct LushuApp: App {
                     .disabled(appState.currentDraft.isBlank)
             }
             CommandMenu("律书") {
-                Button("载入示例案件") { appState.loadSamples() }
+                Button("首页对话") { appState.returnToHome() }
+                Button("载入示例案件") { appState.loadSamples(enterWorkspace: false) }
                 Button("导入") { appState.setWorkstation(.importMaterials) }
                     .keyboardShortcut("1", modifiers: [.command])
                 Button("结构化") { appState.structureSelectedCase() }

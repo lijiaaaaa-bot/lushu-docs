@@ -7,7 +7,7 @@ struct RootView: View {
         ZStack {
             Theme.paper.ignoresSafeArea()
             if appState.showOnboarding {
-                OnboardingView()
+                HomeChatView()
             } else {
                 WorkspaceView()
             }
@@ -38,9 +38,15 @@ struct RootView: View {
     }
 }
 
-#Preview("引导") {
+#Preview("首页对话") {
     RootView()
         .environmentObject(AppState())
+        .frame(width: 1280, height: 820)
+}
+
+#Preview("首页已挂示例") {
+    RootView()
+        .environmentObject(AppState(seedHomeSample: true))
         .frame(width: 1280, height: 820)
 }
 

@@ -8,7 +8,7 @@ enum BriefStance: String, Codable, Hashable, CaseIterable {
     var title: String { rawValue }
 }
 
-/// 从长要点解析出的任务卡。绑定单一 CaseSource，不进入全局会话。
+/// 从长要点解析出的任务卡。首页可暂存在 inbox，挂上 CasePack 后并入该案。
 struct BriefCard: Identifiable, Hashable, Codable {
     var id: UUID
     var caseID: UUID

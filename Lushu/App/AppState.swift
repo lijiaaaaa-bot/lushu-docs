@@ -31,6 +31,9 @@ final class AppState: ObservableObject {
     @Published var lastStructureMessage: String?
     @Published var openedChunk: LegalChunk?
 
+    /// 尚未挂上 CasePack 时，首页对话暂存在此。挂上案件后并入该案。
+    static let homeInboxID = UUID(uuidString: "A0000000-0000-4000-8000-000000000001")!
+
     let packStore = CasePackStore()
     let corpus: LegalCorpus
     private var generator: DocumentGenerator { DocumentGenerator(corpus: corpus) }
@@ -78,14 +81,35 @@ final class AppState: ObservableObject {
 
     var hasActionableBrief: Bool { currentBriefCard?.isActionable == true }
 
+    var homeChat: CaseBriefChat {
+        if let id = selectedSourceID, let chat = briefChats[id] {
+            return chat
+        }
+        return briefChats[Self.homeInboxID] ?? CaseBriefChat(caseID: Self.homeInboxID)
+    }
+
+    var homeMessages: [BriefChatMessage] { homeChat.messages }
+
+    var canGenerateFromHome: Bool {
+        selectedSource != nil
+            && hasActionableBrief
+            && !(selectedSource?.materials.isEmpty ?? true)
+    }
+
     init(
         seedSamples: Bool = false,
         seedDrafts: Bool = false,
-        seedFocus: WorkspaceFocus = .materials
+        seedFocus: WorkspaceFocus = .materials,
+        seedHomeSample: Bool = false
     ) {
         corpus = LegalCorpus.loadPreferred()
+        briefChats[Self.homeInboxID] = CaseBriefChat(caseID: Self.homeInboxID)
+        if seedHomeSample {
+            loadSamples(enterWorkspace: false)
+            return
+        }
         if seedSamples {
-            loadSamples()
+            loadSamples(enterWorkspace: true)
         }
         if seedDrafts, selectedSource != nil {
             do {
@@ -102,19 +126,23 @@ final class AppState: ObservableObject {
         }
     }
 
-    func loadSamples() {
+    func loadSamples(enterWorkspace: Bool = false) {
         do {
             let sample = try SampleData.haitianParking(into: packStore)
             sources = [sample]
             selectedSourceID = sample.id
             drafts[sample.id] = DraftDocument.blankSummary(caseTitle: sample.title)
-            seedExampleBrief(for: sample)
+            adoptInboxOrSeedExample(onto: sample)
             selectedKind = .customReport
-            showOnboarding = false
-            focus = .manuscript
-            workstation = .document
             showBriefChat = true
-            flash("已载入示例子集：\(sample.title)。已写入乙方费用报告任务卡，可点「生成文书」。")
+            if enterWorkspace {
+                revealWorkspace()
+            } else {
+                showOnboarding = true
+                appendHomeAssistant(attachmentConfirmation(for: sample) + "\n可点「生成文书」按任务卡落稿，或继续改要点。")
+            }
+            briefComposerText = ""
+            flash("已挂上示例子集：\(sample.title)。完整原件在 iCloud Drive「材料」。")
         } catch {
             flash(error.localizedDescription)
         }
@@ -122,14 +150,17 @@ final class AppState: ObservableObject {
 
     func chooseAnxiaFolder() {
         flash("请选取 iCloud Drive「\(SampleCaseLoader.iCloudFolderName)」：\(SampleCaseLoader.iCloudPath)。完整原件含合同.pdf 与审计件（未入库）。系统选文件夹下一轮接入。")
+        appendHomeAssistant("请选取 iCloud Drive「材料」：\(SampleCaseLoader.iCloudPath)。本轮系统选文件夹未接线。可先「载入示例案件」挂上 5 份停车表与照明测算。合同.pdf / 审计件不入库。")
     }
 
     func importFiles() {
         flash("可从 iCloud Drive「材料」导入文件。系统多选下一轮接入。大体积合同.pdf / 审计件不要提交进仓库。")
+        appendHomeAssistant("导入文件下一轮接入系统多选。大体积合同.pdf / 审计件不要提交进仓库。可先「载入示例案件」。")
     }
 
     func importFolder() {
         flash("请选取 iCloud Drive「材料」文件夹。系统选文件夹下一轮接入。")
+        appendHomeAssistant("请选取 iCloud Drive「材料」文件夹。系统选文件夹下一轮接入。")
     }
 
     func selectSource(_ id: CaseSource.ID) {
@@ -156,7 +187,8 @@ final class AppState: ObservableObject {
             selectedMaterialID = nil
         }
         if sources.isEmpty {
-            showOnboarding = true
+            selectedSourceID = nil
+            returnToHome()
             focus = .materials
             workstation = .importMaterials
         }
@@ -188,8 +220,25 @@ final class AppState: ObservableObject {
     func pickMaterials() {
         setWorkstation(.importMaterials)
         if sources.isEmpty {
-            showOnboarding = true
+            returnToHome()
         }
+    }
+
+    func revealWorkspace() {
+        guard !sources.isEmpty else {
+            flash("先挂上案件材料，再进工作区。")
+            returnToHome()
+            return
+        }
+        showOnboarding = false
+        focus = .manuscript
+        workstation = .document
+        showBriefChat = true
+    }
+
+    func returnToHome() {
+        showOnboarding = true
+        showHiddenCitations = false
     }
 
     func structureSelectedCase() {
@@ -299,17 +348,56 @@ final class AppState: ObservableObject {
     }
 
     func fillExampleBrief() {
-        guard let source = selectedSource, source.isSample else {
-            flash("示例要点只挂在海天×阜外示例子集上。")
-            return
-        }
         briefComposerText = SampleCaseLoader.exampleBrief()
-        updateBriefCard()
+        sendHomeMessage()
     }
 
-    func updateBriefCard() {
+    func useHaitianPromptChip() {
+        briefChats[Self.homeInboxID] = CaseBriefChat(caseID: Self.homeInboxID)
+        if selectedSource == nil {
+            loadSamples(enterWorkspace: false)
+        } else {
+            briefComposerText = SampleCaseLoader.exampleBrief()
+            sendHomeMessage()
+        }
+    }
+
+    func useSummaryPromptChip() {
+        briefComposerText = """
+        请按中立立场写一份材料总结。文书目的：整理已结构化材料清单与已定位文本。
+        请包含：案件概要、材料清单、事实要点、待补材料与缺口。
+        约束：不编造法条，不估未读出的单元格金额。
+        """
+        sendHomeMessage()
+    }
+
+    func sendHomeMessage() {
+        let incoming = briefComposerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !incoming.isEmpty else {
+            flash("先写入长要点。")
+            return
+        }
+        if selectedSource != nil {
+            updateBriefCard(revealWorkspace: false)
+            return
+        }
+        var chat = briefChats[Self.homeInboxID] ?? CaseBriefChat(caseID: Self.homeInboxID)
+        chat.messages.append(BriefChatMessage(role: .user, text: incoming))
+        chat.card = BriefCardParser.parse(incoming, caseID: Self.homeInboxID, existing: chat.card)
+        chat.messages.append(
+            BriefChatMessage(
+                role: .assistant,
+                text: BriefCardParser.acknowledge(chat.card) + "\n尚未挂上 CasePack。请点「选材料文件夹」或「载入示例案件」。生成只吃结构化材料。"
+            )
+        )
+        briefChats[Self.homeInboxID] = chat
+        briefComposerText = ""
+        flash("已记下要点。请挂上案件材料。")
+    }
+
+    func updateBriefCard(revealWorkspace: Bool = false) {
         guard let source = selectedSource else {
-            flash("撰稿对话必须绑定当前案件，没有选中来源。")
+            sendHomeMessage()
             return
         }
         var chat = briefChats[source.id] ?? CaseBriefChat(caseID: source.id)
@@ -328,18 +416,39 @@ final class AppState: ObservableObject {
         chat.messages.append(BriefChatMessage(role: .assistant, text: BriefCardParser.acknowledge(chat.card, inputs: inputs)))
         briefChats[source.id] = chat
         try? packStore.writeBriefChat(source.pack, chat: chat)
-        setWorkstation(.document)
+        if revealWorkspace {
+            setWorkstation(.document)
+        }
         flash("任务卡已更新。生成仍只吃结构化材料。")
     }
 
     func generateFromBrief() {
+        generateFromHome()
+    }
+
+    func generateFromHome() {
         if !briefComposerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            updateBriefCard()
+            updateBriefCard(revealWorkspace: false)
+        }
+        guard selectedSource != nil else {
+            flash("先挂上案件材料，再生成文书。")
+            return
         }
         if let card = currentBriefCard, card.isActionable, card.documentPurpose.contains("报告") {
             selectedKind = .customReport
         }
-        composeDocument()
+        do {
+            try generateFromStructuredInputs()
+            revealWorkspace()
+        } catch let error as DocumentGenerationError {
+            flash(error.localizedDescription)
+            if case .unstructuredInputsRejected = error {
+                setWorkstation(.structure)
+                revealWorkspace()
+            }
+        } catch {
+            flash(error.localizedDescription)
+        }
     }
 
     func updateSection(id: DraftSection.ID, body: String) {
@@ -421,6 +530,40 @@ final class AppState: ObservableObject {
         briefChats[source.id] = chat
         try? packStore.writeBriefChat(source.pack, chat: chat)
         briefComposerText = ""
+    }
+
+    private func adoptInboxOrSeedExample(onto source: CaseSource) {
+        let inbox = briefChats[Self.homeInboxID]
+        if let inbox, inbox.hasCard || !inbox.messages.isEmpty {
+            var chat = CaseBriefChat(caseID: source.id)
+            chat.messages = inbox.messages
+            let raw = inbox.card.sourceMessage.isEmpty
+                ? (inbox.messages.last(where: { $0.role == .user })?.text ?? SampleCaseLoader.exampleBrief())
+                : inbox.card.sourceMessage
+            chat.card = BriefCardParser.parse(raw, caseID: source.id)
+            briefChats[source.id] = chat
+            briefChats[Self.homeInboxID] = CaseBriefChat(caseID: Self.homeInboxID)
+            try? packStore.writeBriefChat(source.pack, chat: chat)
+            briefComposerText = ""
+        } else {
+            seedExampleBrief(for: source)
+        }
+    }
+
+    private func attachmentConfirmation(for source: CaseSource) -> String {
+        let tables = source.materials.filter { $0.tableStatus == .realWorkbook }.count
+        let texts = source.locatedTexts.count
+        return "已挂上「\(source.title)」。真表 \(tables) 份，已定位文本 \(texts) 块。\(source.locationCaption)。"
+    }
+
+    private func appendHomeAssistant(_ text: String) {
+        let key = selectedSourceID ?? Self.homeInboxID
+        var chat = briefChats[key] ?? CaseBriefChat(caseID: key)
+        chat.messages.append(BriefChatMessage(role: .assistant, text: text))
+        briefChats[key] = chat
+        if let source = selectedSource {
+            try? packStore.writeBriefChat(source.pack, chat: chat)
+        }
     }
 
     @discardableResult

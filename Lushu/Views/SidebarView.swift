@@ -44,6 +44,10 @@ struct SidebarView: View {
                     .font(Theme.serifBody(13))
                     .foregroundStyle(Theme.mute)
                 Spacer()
+                Button("首页") { appState.returnToHome() }
+                    .buttonStyle(.plain)
+                    .font(Theme.caption(11))
+                    .foregroundStyle(Theme.mute)
                 Button("设置") { appState.showSettings = true }
                     .buttonStyle(.plain)
                     .font(Theme.caption(11))
@@ -71,7 +75,7 @@ struct SidebarView: View {
                 }
             }
             if appState.visibleSources.isEmpty {
-                Text(appState.sources.isEmpty ? "尚未选取 iCloud「材料」或载入示例案件。" : "无匹配来源。")
+                Text(appState.sources.isEmpty ? "回首页对话挂上材料，或载入示例案件。" : "无匹配来源。")
                     .font(Theme.serifBody(13))
                     .foregroundStyle(Theme.mute)
                     .padding(.vertical, 4)
