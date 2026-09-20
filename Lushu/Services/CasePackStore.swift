@@ -39,6 +39,15 @@ struct CasePackStore {
         }
     }
 
+    func copyReplacing(from source: URL, to dest: URL) throws {
+        let fm = FileManager.default
+        try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if fm.fileExists(atPath: dest.path) {
+            try fm.removeItem(at: dest)
+        }
+        try fm.copyItem(at: source, to: dest)
+    }
+
     func writeTextBlocks(_ pack: CasePack, filename: String, blocks: [LocatedTextBlock]) throws {
         let dest = subdirectory(pack, CasePackLayout.structuredTexts).appendingPathComponent(filename)
         let encoder = JSONEncoder()

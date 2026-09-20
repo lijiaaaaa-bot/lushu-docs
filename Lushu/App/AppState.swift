@@ -75,10 +75,8 @@ final class AppState: ObservableObject {
         if seedSamples {
             loadSamples()
         }
-        if seedDrafts, let source = selectedSource {
+        if seedDrafts, selectedSource != nil {
             do {
-                try preparePack(source)
-                _ = try runStructuring(on: source, lock: true)
                 try generateFromStructuredInputs()
             } catch {
                 flash(error.localizedDescription)
@@ -93,34 +91,30 @@ final class AppState: ObservableObject {
     }
 
     func loadSamples() {
-        let samples = [SampleData.laborDispute(), SampleData.houseContract()]
-        sources = samples
-        selectedSourceID = samples.first?.id
-        showOnboarding = false
-        focus = .materials
-        workstation = .importMaterials
-        for sample in samples {
+        do {
+            let sample = try SampleData.haitianParking(into: packStore)
+            sources = [sample]
+            selectedSourceID = sample.id
             drafts[sample.id] = DraftDocument.blankSummary(caseTitle: sample.title)
-            try? preparePack(sample)
+            showOnboarding = false
+            focus = .materials
+            workstation = .importMaterials
+            flash("已载入示例子集：\(sample.title)。完整原件在 iCloud Drive「材料」。")
+        } catch {
+            flash(error.localizedDescription)
         }
     }
 
     func chooseAnxiaFolder() {
-        ingestDemoSource(SampleData.laborDispute(), note: "已载入案匣示例。真实选文件夹与书签下一轮接入。")
+        flash("请选取 iCloud Drive「\(SampleCaseLoader.iCloudFolderName)」：\(SampleCaseLoader.iCloudPath)。完整原件含合同.pdf 与审计件（未入库）。系统选文件夹下一轮接入。")
     }
 
     func importFiles() {
-        ingestDemoSource(
-            rewritten(SampleData.houseContract(), origin: .importedFiles, caption: "导入 · 所选文件"),
-            note: "已载入导入文件示例。系统多选下一轮接入。"
-        )
+        flash("可从 iCloud Drive「材料」导入文件。系统多选下一轮接入。大体积合同.pdf / 审计件不要提交进仓库。")
     }
 
     func importFolder() {
-        ingestDemoSource(
-            SampleData.houseContract(),
-            note: "已载入导入文件夹示例。系统选文件夹下一轮接入。"
-        )
+        flash("请选取 iCloud Drive「材料」文件夹。系统选文件夹下一轮接入。")
     }
 
     func selectSource(_ id: CaseSource.ID) {
@@ -405,7 +399,27 @@ final class AppState: ObservableObject {
         guard let index = sources.firstIndex(where: { $0.id == sourceID }) else { return }
         let source = sources[index]
         let blocks: [LocatedTextBlock] = source.materials.filter { $0.layer == .raw && $0.included }.map { item in
-            LocatedTextBlock(
+            if let existing = source.locatedTexts.first(where: { $0.locator.relativePath == item.relativePath }),
+               !existing.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               !existing.text.hasPrefix("已定位材料：") {
+                return existing
+            }
+            let fileURL = packStore.subdirectory(source.pack, CasePackLayout.raw)
+                .appendingPathComponent(item.filename)
+            if item.kind == .docx, let extracted = try? OfficeDocument.extractDOCX(from: fileURL) {
+                return LocatedTextBlock(
+                    id: UUID(),
+                    locator: MaterialLocator(
+                        packID: source.pack.id,
+                        relativePath: item.relativePath,
+                        page: nil,
+                        startOffset: 0,
+                        endOffset: extracted.count
+                    ),
+                    text: extracted
+                )
+            }
+            return LocatedTextBlock(
                 id: UUID(),
                 locator: MaterialLocator(
                     packID: source.pack.id,
@@ -434,26 +448,4 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func ingestDemoSource(_ source: CaseSource, note: String) {
-        var incoming = source
-        incoming.id = UUID()
-        incoming.pack = CasePack.make(id: incoming.id, title: incoming.title)
-        incoming.lastOpenedAt = Date()
-        sources.insert(incoming, at: 0)
-        drafts[incoming.id] = DraftDocument.blankSummary(caseTitle: incoming.title)
-        try? preparePack(incoming)
-        selectedSourceID = incoming.id
-        selectedMaterialID = nil
-        focus = .materials
-        workstation = .importMaterials
-        showOnboarding = false
-        flash(note)
-    }
-
-    private func rewritten(_ source: CaseSource, origin: SourceOrigin, caption: String) -> CaseSource {
-        var copy = source
-        copy.origin = origin
-        copy.locationCaption = caption
-        return copy
-    }
 }

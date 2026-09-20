@@ -9,7 +9,7 @@ struct MaterialsLibraryView: View {
             if appState.selectedSource == nil {
                 EmptyStateView(
                     title: "尚未选材料",
-                    detail: "工位从导入开始。原始件进 raw/，表结构化工位产出 structured/tables 下的真 .xlsx。",
+                    detail: "选取 iCloud Drive「材料」，或载入示例案件。原始件进 raw/，xlsx 进 structured/tables 真表。",
                     actionTitle: "导入"
                 ) {
                     appState.pickMaterials()

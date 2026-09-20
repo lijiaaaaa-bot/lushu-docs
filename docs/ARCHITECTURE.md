@@ -44,6 +44,10 @@ CasePack/
 - `LegalCorpus` 按全文 `id`（如 `刑法/第一条`）与 `(law_id, article_num)` 建索引；`lookup` / `validate` 失败即报错，**不编造**
 - **生成引用只能来自这些 JSON。** 完整法索包是后续事项，同一接口再扩诉讼法等
 
+## 示例案件材料
+
+`Lushu/Resources/SampleCase/haitian-parking/`（海天×阜外停车场费用材料）：xlsx 进 `structured/tables`，docx 进 `raw/` 并提取。完整原件在 iCloud Drive「材料」；`合同.pdf` 与审计 PDF **不入库**。
+
 ## UI 落点（在现有三栏上）
 
 - 中栏材料：区分「原始」与「已结构化」；表格行显示「打开 Excel」而非碎文本预览为主

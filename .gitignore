@@ -16,6 +16,11 @@ xcuserdata/
 .AppleDouble
 .LSOverride
 
+# iCloud「材料」大体积原件（合同 / 审计）禁止入库
+**/合同.pdf
+**/*审计*.pdf
+Lushu/Resources/SampleCase/**/*.pdf
+
 # Secrets — never commit API keys
 .env
 .env.*

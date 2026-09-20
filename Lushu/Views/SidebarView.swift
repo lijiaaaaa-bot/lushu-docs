@@ -71,7 +71,7 @@ struct SidebarView: View {
                 }
             }
             if appState.visibleSources.isEmpty {
-                Text(appState.sources.isEmpty ? "尚未接入案匣或导入。" : "无匹配来源。")
+                Text(appState.sources.isEmpty ? "尚未选取 iCloud「材料」或载入示例案件。" : "无匹配来源。")
                     .font(Theme.serifBody(13))
                     .foregroundStyle(Theme.mute)
                     .padding(.vertical, 4)

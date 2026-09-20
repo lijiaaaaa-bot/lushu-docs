@@ -51,12 +51,25 @@
 
 ## 未接线（按钮可点，只说明）
 
-- 系统选档、security-scoped bookmark
-- PDF / DOCX 正文解析
+- 系统选档、security-scoped bookmark（引导页请选取 iCloud Drive「材料」）
+- PDF 正文解析（合同.pdf、审计件不入库，也不在本轮解析）
 - 大模型请求与钥匙串
 - NSSavePanel / 写回文件夹
 
-见 `Lushu/Services/PendingIntegrations.swift`。
+bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIntegrations.swift`。
+
+## 示例案件：海天×阜外停车场费用材料
+
+引导页「载入示例案件」读 `Lushu/Resources/SampleCase/haitian-parking/`：
+
+- 5 份 `.xlsx`（2022–2026 阜外医院职工停车信息表）→ CasePack `structured/tables/` **真工作簿**（原件拷贝，不是碎行重写）
+- 1 份 `.docx`（2026.9.16 停车场照明用电测算表）→ `raw/` + `structured/texts` 提取正文
+
+**完整原件**在承办律师 iCloud Drive「材料」：
+
+`/Users/lijia/Library/Mobile Documents/com~apple~CloudDocs/材料`
+
+**不要提交**该目录里的大体积 PDF（`合同.pdf`、审计件）。本仓库只收可入库的 xlsx / docx 子集。
 
 ## 法条子集
 
@@ -84,7 +97,7 @@
 
 1. Xcode 16+，打开 `Lushu.xcodeproj`。
 2. Scheme **Lushu**，目标 My Mac。
-3. Run。引导页可「载入示例」看三栏。Canvas 预览：引导 / 工作区 / 稿纸。
+3. Run。引导页「载入示例案件」打开海天×阜外示例子集；或选取 iCloud Drive「材料」。Canvas 预览：引导 / 工作区 / 稿纸。
 
 快捷键：⌘1 导入 · ⌘2 结构化 · ⌘3 文书 · ⌘4 溯源 · ⌘O 案匣文件夹 · ⌘E 导出。
 

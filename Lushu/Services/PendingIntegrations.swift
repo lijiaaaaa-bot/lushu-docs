@@ -8,6 +8,10 @@ enum PendingIntegrations {
 
     static func extractPlainText(fromRelativePath _: String) -> String? { nil }
 
+    static func extractPlainText(from url: URL) throws -> String {
+        try OfficeDocument.extractText(from: url)
+    }
+
     static func readAPIKeyFromKeychain() -> String? { nil }
 
     static func writeAPIKeyToKeychain(_: String) {}

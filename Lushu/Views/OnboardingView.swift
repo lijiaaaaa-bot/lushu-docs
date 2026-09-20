@@ -9,7 +9,7 @@ struct OnboardingView: View {
                 Text("律书")
                     .font(Theme.brandTitle(48))
                     .foregroundStyle(Theme.ink)
-                Text("从案匣材料写成文书。先做材料总结。")
+                Text("从案匣或 iCloud「材料」写成文书。先做材料总结。")
                     .font(Theme.serifBody(16))
                     .foregroundStyle(Theme.mute)
             }
@@ -23,8 +23,8 @@ struct OnboardingView: View {
 
             HStack(alignment: .top, spacing: 16) {
                 OnboardingDrawerCard(
-                    title: "案匣文件夹",
-                    detail: "优先指向案匣或 iCloud 中的案件目录。一次授权，持续读取。",
+                    title: "iCloud「材料」",
+                    detail: "选取 iCloud Drive「材料」文件夹。完整原件在该目录（含合同.pdf、审计件，未入库）。一次授权，持续读取。",
                     badge: "优先",
                     outlined: false
                 ) {
@@ -32,7 +32,7 @@ struct OnboardingView: View {
                 }
                 OnboardingDrawerCard(
                     title: "导入文件",
-                    detail: "尚未建柜时，导入单个、多个文件或整个文件夹。",
+                    detail: "尚未建柜时，从「材料」导入单个、多个文件或整个文件夹。",
                     badge: "回退",
                     outlined: true
                 ) {
@@ -46,7 +46,7 @@ struct OnboardingView: View {
                 Text("·")
                     .foregroundStyle(Theme.mute)
                     .accessibilityHidden(true)
-                SerifTextButton(title: "载入示例") { appState.loadSamples() }
+                SerifTextButton(title: "载入示例案件") { appState.loadSamples() }
                 if !appState.sources.isEmpty {
                     Text("·")
                         .foregroundStyle(Theme.mute)
