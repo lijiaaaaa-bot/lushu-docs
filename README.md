@@ -69,7 +69,7 @@
 - 存储：`APIKeyStore`（service `bot.lijiaaaaa.lushu`，account `deepseek.apiKey`，`AfterFirstUnlockThisDeviceOnly`）。本仓库未包含 LiJiaKit KeychainKit；path 可用时替换为本实现。
 - 请求：`DeepSeekClient` → `https://api.deepseek.com/chat/completions`，模型 `deepseek-chat`，`thinking.type = disabled`，非流式。本仓库未包含 LLMKit；同模式薄封装。
 - **无密钥**：首页仍做确定性 `BriefCard` 解析与结构化本地落稿。模型回执 / 润色只提示打开设置，**不编造内容**。
-- **有密钥**：可选回执改写与稿面润色，只改已落地措辞。`GroundedLLM` 禁止编造法条、金额、电价 P、全场灯数 N。
+- **有密钥**：可选回执改写与稿面润色，只改已落地措辞。`GroundedLLM` 禁止编造法条、金额、电价 P、全场灯数 N。测算报告在 `FeeReportBuilder` 骨架上做数字锁润色（金额/条号/日期必须原样出现，否则回退骨架）；无密钥仍导出带 Word 真表的骨架 .docx。
 - 单元测试：`LushuTests/DeepSeekClientTests.swift`（请求体含思考链关闭，且不嵌入密钥）。
 
 ## 未接线（按钮可点，只说明）
@@ -97,7 +97,7 @@ bundled 示例的 DOCX 已做 OOXML 正文提取。见 `Lushu/Services/PendingIn
 
 首页就是短对话：贴要点 → 选材料 / 示例 → 用户气泡上方出现材料卡片 → 短确认 → 纸面落稿并下载。长任务卡与完整稿在工作区。未挂案件时要点暂存在 inbox。可选 DeepSeek 只润色落稿，不往气泡里贴全文或真表。
 
-「载入示例案件」或 chip「海天乙方电费+停车费报告」写入 `example-brief.txt`。生成目标是**律师可提交的测算报告**（函件体：测算依据 / 停车场电费 / 职工停车费 / 测算结论），不是材料索引。停车费年度金额从 bundled xlsx「汇总」页读取（2022–2025 年度合计，2026 年只加总已填月份）。电费章节列出四区实测；任务卡若写明参考电价P与灯数，再算跨期金额并注明以双方确认为准。2018–2021 仅当任务卡写明估算方法时才月均摊。不编未粘贴的合同条号，不套行业经验电价。金标准结构见 `docs/fixtures/haitian-parking-gold-report.md`。
+「载入示例案件」或 chip「海天乙方电费+停车费报告」写入 `example-brief.txt`。生成目标是**律师可提交的测算报告**（函件体：测算依据 / 停车场电费 / 职工停车费 / 测算结论），不是材料索引。停车费年度金额从 bundled xlsx「汇总」页读取（2022–2025 年度合计，2026 年只加总已填月份）。电费章节列出四区实测；任务卡若写明参考电价P与灯数，再算跨期金额并注明以双方确认为准。2018–2021 仅当任务卡写明估算方法时才月均摊。不编未粘贴的合同条号，不套行业经验电价。金标准结构见 `docs/fixtures/haitian-parking-gold-report.md`；润色语气与数字锁见 `docs/fixtures/haitian-parking-style-note.md`。测算报告 .docx 用 Word 真表，有 DeepSeek 密钥时只润色措辞并锁定金额/条号/日期。
 
 起诉状 / 答辩状仍是侧栏占位，不另做第二套首页用法。
 

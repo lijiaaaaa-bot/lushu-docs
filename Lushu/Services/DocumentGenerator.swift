@@ -42,11 +42,21 @@ struct DocumentGenerator {
         draft.citations.append(copy)
     }
 
-    /// 润色只允许改已落稿措辞，不得增补数字或未经校验的法条。本轮不接模型。
-    func polishWording(_ draft: DraftDocument) -> DraftDocument {
-        var copy = draft
-        copy.generatorLabel = draft.generatorLabel + " · 措辞未改（未接模型）"
-        return copy
+    /// 润色只允许改已落稿措辞。传入模型回文时做数字锁；失败或不传则保持骨架。
+    func polishWording(_ draft: DraftDocument, polishedMarkdown: String? = nil) -> DraftDocument {
+        guard let polishedMarkdown,
+              !polishedMarkdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return draft
+        }
+        switch NumberLock.merge(polishedMarkdown, into: draft) {
+        case .success(var merged):
+            if !merged.generatorLabel.contains("DeepSeek") {
+                merged.generatorLabel += " · DeepSeek 措辞"
+            }
+            return merged
+        case .failure:
+            return draft
+        }
     }
 
     private func summary(from inputs: StructuredCaseInputs) -> DraftDocument {

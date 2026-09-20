@@ -104,6 +104,8 @@ final class HaitianFeeReportTests: XCTestCase {
         XCTAssertTrue(body.contains("865,794.00") || body.contains("865794"))
         XCTAssertTrue(body.contains("927,147.00") || body.contains("927147"))
         XCTAssertTrue(body.contains("579,123.00") || body.contains("579123"))
+        XCTAssertTrue(body.contains("3,685,344.00") || body.contains("3685344") || body.contains("3,685,344"))
+        XCTAssertTrue(body.contains("3,106,221.00") || body.contains("3106221"))
         XCTAssertTrue(body.contains("第九条第七款"))
         XCTAssertTrue(body.contains("参考电价"))
         XCTAssertTrue(body.contains("0.65"))
@@ -120,7 +122,12 @@ final class HaitianFeeReportTests: XCTestCase {
         let xml = String(data: try ZipArchive.data(named: "word/document.xml", in: dest), encoding: .utf8) ?? ""
         XCTAssertTrue(xml.contains("测算依据"))
         XCTAssertTrue(xml.contains("561"))
+        XCTAssertTrue(xml.contains("<w:tbl>"))
+        XCTAssertTrue(xml.contains("<w:tr>"))
+        XCTAssertTrue(xml.contains("<w:tc>"))
+        XCTAssertFalse(xml.contains("2022年 | 561"))
         XCTAssertFalse(xml.contains("根据刑法"))
+        XCTAssertFalse(draft.generatorLabel.contains("DeepSeek"), "无密钥时应保持骨架，但仍写出 Word 真表")
     }
 
     func testElectricityAmountBlankWhenPriceMissing() {

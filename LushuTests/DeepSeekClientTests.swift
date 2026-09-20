@@ -43,6 +43,8 @@ final class DeepSeekClientTests: XCTestCase {
     func testGroundedPromptForbidsInventedFacts() {
         XCTAssertTrue(GroundedLLM.systemPrompt.contains("禁止编造"))
         XCTAssertTrue(GroundedLLM.systemPrompt.contains("电价P"))
+        XCTAssertTrue(GroundedLLM.feeReportStyleNotes.contains("硬锁"))
+        XCTAssertTrue(GroundedLLM.feeReportStyleNotes.contains("禁止重算"))
         XCTAssertTrue(GroundedLLM.missingKeyHint.contains("设置"))
         XCTAssertTrue(GroundedLLM.missingKeyHint.contains("钥匙串"))
         XCTAssertFalse(GroundedLLM.missingKeyHint.contains("0.85"))

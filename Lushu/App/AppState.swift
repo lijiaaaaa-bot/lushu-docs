@@ -363,6 +363,7 @@ final class AppState: ObservableObject {
         setWorkstation(.document)
         do {
             try generateFromStructuredInputs()
+            maybePolishAfterGenerate()
         } catch let error as DocumentGenerationError {
             flash(error.localizedDescription)
             if case .unstructuredInputsRejected = error {
@@ -382,17 +383,20 @@ final class AppState: ObservableObject {
             flash("还没有可下载的文书。")
             return
         }
-        do {
-            try packStore.writeDraft(source.pack, draft: draft)
-            try DocumentExport.saveUserCopy(
-                docx: packStore.draftDOCXURL(source.pack, draft: draft),
-                markdown: packStore.draftMarkdownURL(source.pack, draft: draft),
-                draft: draft
-            )
-            flash("已提供下载。草稿仍在案件包 drafts/。")
-        } catch {
-            flash(error.localizedDescription)
+        refreshDeepSeekKeyStatus()
+        if hasDeepSeekKey,
+           !draft.generatorLabel.contains("DeepSeek"),
+           let key = try? APIKeyStore.readDeepSeekKey(),
+           !key.isEmpty {
+            isGenerating = true
+            Task {
+                await polishWithDeepSeek(sourceID: source.id, key: key, announce: true)
+                writeExportedDraft()
+                isGenerating = false
+            }
+            return
         }
+        writeExportedDraft()
     }
 
     var hasGeneratedDraft: Bool {
@@ -474,13 +478,7 @@ final class AppState: ObservableObject {
         }
         isGenerating = true
         Task {
-            do {
-                let text = try await DeepSeekClient().complete(messages: GroundedLLM.polishMessages(draft: draft), key: key)
-                applyPolishedMarkdown(text, to: sourceID)
-                flash("已用 DeepSeek 润色措辞。未增补数字或法条。")
-            } catch {
-                flash(error.localizedDescription)
-            }
+            await polishWithDeepSeek(sourceID: sourceID, key: key, announce: true)
             isGenerating = false
         }
     }
@@ -803,45 +801,48 @@ final class AppState: ObservableObject {
         requestLLMPolish()
     }
 
-    private func applyPolishedMarkdown(_ markdown: String, to sourceID: UUID) {
-        guard var draft = drafts[sourceID] else { return }
-        var changed = false
-        for index in draft.sections.indices {
-            let heading = draft.sections[index].heading
-            if let body = Self.extractMarkdownSection(heading, from: markdown), !body.isEmpty {
-                draft.sections[index].body = body
-                changed = true
+    private func polishWithDeepSeek(sourceID: UUID, key: String, announce: Bool) async {
+        guard let draft = drafts[sourceID], !draft.isBlank else { return }
+        do {
+            let text = try await DeepSeekClient().complete(
+                messages: GroundedLLM.polishMessages(draft: draft),
+                key: key
+            )
+            let polished = generator.polishWording(draft, polishedMarkdown: text)
+            if polished.generatorLabel.contains("DeepSeek") {
+                drafts[sourceID] = polished
+                if let source = sources.first(where: { $0.id == sourceID }) {
+                    try? packStore.writeDraft(source.pack, draft: polished)
+                }
+                if announce {
+                    flash("已用 DeepSeek 润色措辞。金额、条号与日期未改。")
+                }
+            } else if announce {
+                flash("DeepSeek 回文改动了锁定数字或无法按原章节套回，已保留本地骨架。")
             }
-        }
-        guard changed else {
-            flash("DeepSeek 回文无法按原章节套回，未改本地稿。")
-            return
-        }
-        if !draft.generatorLabel.contains("DeepSeek") {
-            draft.generatorLabel += " · DeepSeek 措辞"
-        }
-        drafts[sourceID] = draft
-        if let source = sources.first(where: { $0.id == sourceID }) {
-            try? packStore.writeDraft(source.pack, draft: draft)
+        } catch {
+            if announce {
+                flash(error.localizedDescription)
+            }
         }
     }
 
-    private static func extractMarkdownSection(_ heading: String, from markdown: String) -> String? {
-        let lines = markdown.components(separatedBy: .newlines)
-        var collecting = false
-        var body: [String] = []
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("#") {
-                let title = trimmed.replacingOccurrences(of: #"^#+\s*"#, with: "", options: .regularExpression)
-                if collecting { break }
-                collecting = title.contains(heading) || heading.contains(title)
-                continue
-            }
-            if collecting { body.append(line) }
+    private func writeExportedDraft() {
+        guard let source = selectedSource, let draft = drafts[source.id], !draft.isBlank else {
+            flash("还没有可下载的文书。")
+            return
         }
-        let text = body.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-        return text.isEmpty ? nil : text
+        do {
+            try packStore.writeDraft(source.pack, draft: draft)
+            try DocumentExport.saveUserCopy(
+                docx: packStore.draftDOCXURL(source.pack, draft: draft),
+                markdown: packStore.draftMarkdownURL(source.pack, draft: draft),
+                draft: draft
+            )
+            flash("已提供下载。草稿仍在案件包 drafts/。")
+        } catch {
+            flash(error.localizedDescription)
+        }
     }
 
     @discardableResult

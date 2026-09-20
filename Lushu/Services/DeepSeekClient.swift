@@ -101,6 +101,24 @@ enum GroundedLLM {
     已测算数字必须原样保留。不得新增 LegalCitation。思考链关闭，只给正文。
     """
 
+    /// 金标准函件体：只学语气与过渡。数字、条号、日期一律以本地骨架为准。
+    static let feeReportStyleNotes = """
+    骨架已由本地测算器写好，你只改律师函件语气，禁止从零起草，禁止重算电费或停车费。
+    硬锁：每一个数字、金额（含千分位与小数位）、合同条号、日历日期必须在正文中原样出现；改一个即整篇作废。
+    删掉「任务卡」「结构化」「本地组装」「已锁定」「本稿」等系统口吻。
+    语气接近金标准：标题后「致××：」，用「现就……报告如下」「则」「另」过渡；依据分（一）合同约定（二）事实依据；电费先概况再分区再分段；停车费先计费再年度表再缺年；结论用汇总表 +「综上」+ 乙方落款。
+    按原章节标题输出 Markdown（## 抬头与背景 / ## 测算依据 / ## 停车场电费 / ## 职工停车费 / ## 测算结论）。表格行保留「列 | 列 | 列」格式。
+    """
+
+    static let goldStyleExcerpt = """
+    致贵院：
+    现就合作期间停车场电费及职工停车费测算情况报告如下。
+    （一）合同约定。已粘贴条款按《合同》原条号转写，不另造条号。
+    （二）事实依据。现场加装电表抄录分区读数；职工停车费以各年确认表汇总金额为准，缺年不编行。
+    测量概况之后列分区实测，再按已给参数分段测算，段间用「则」「另」。
+    综上，电费按参考电价列示、最终以双方确认为准；停车费只加总已读出金额。
+    """
+
     static func replyMessages(card: BriefCard, grounded: String) -> [DeepSeekChatMessage] {
         [
             DeepSeekChatMessage(role: "system", content: systemPrompt),
@@ -120,7 +138,10 @@ enum GroundedLLM {
     }
 
     static func polishMessages(draft: DraftDocument) -> [DeepSeekChatMessage] {
-        [
+        if isFeeReportDraft(draft) {
+            return feeReportPolishMessages(draft: draft)
+        }
+        return [
             DeepSeekChatMessage(role: "system", content: systemPrompt),
             DeepSeekChatMessage(
                 role: "user",
@@ -132,6 +153,32 @@ enum GroundedLLM {
                 """
             )
         ]
+    }
+
+    static func feeReportPolishMessages(draft: DraftDocument) -> [DeepSeekChatMessage] {
+        let locks = NumberLock.lockedTokens(in: NumberLock.lockSource(of: draft)).joined(separator: "、")
+        return [
+            DeepSeekChatMessage(role: "system", content: systemPrompt + "\n" + feeReportStyleNotes),
+            DeepSeekChatMessage(
+                role: "user",
+                content: """
+                【金标准语气（只学写法，数字以骨架为准，勿抄未出现的金额）】
+                \(goldStyleExcerpt)
+
+                【必须原样保留】
+                \(locks)
+
+                【本地骨架，只改措辞】
+                \(draft.markdown)
+                """
+            )
+        ]
+    }
+
+    static func isFeeReportDraft(_ draft: DraftDocument) -> Bool {
+        draft.kind == .customReport && draft.sections.contains(where: {
+            $0.heading.contains("测算") || $0.heading.contains("电费") || $0.heading.contains("停车")
+        })
     }
 
     static let missingKeyHint = "DeepSeek 密钥未保存。本地任务卡与结构化落稿仍可用。请到设置粘贴 DeepSeek API Key（只进钥匙串，与剧本工厂相同）。"
