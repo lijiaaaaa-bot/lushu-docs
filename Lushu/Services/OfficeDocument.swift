@@ -43,6 +43,11 @@ enum OfficeDocument {
         return fallbackParkingSchema(filename: url.lastPathComponent)
     }
 
+    /// 读指定工作表全部非空行。默认「汇总」。文件打不开则空数组，不编造单元格。
+    static func readXLSXSheetRows(from url: URL, preferredSheet: String = "汇总") -> [[String]] {
+        (try? readXLSXRows(from: url, preferredSheet: preferredSheet)) ?? []
+    }
+
     /// 已核对 bundled 停车信息表「汇总」页表头，仅作 zip 解析失败时的回退。
     static func fallbackParkingSchema(filename: String) -> TableSchema {
         var names = ["序号", "月份", "金额"]
@@ -57,16 +62,61 @@ enum OfficeDocument {
     }
 
     private static func readXLSXSchema(from url: URL) throws -> TableSchema {
+        let rows = try readXLSXRows(from: url, preferredSheet: "汇总")
+        let header = rows.first(where: { $0.contains(where: { $0.contains("序号") || $0.contains("月份") }) })
+            ?? rows.first { $0.contains(where: { !$0.isEmpty }) }
+            ?? []
         let workbook = try ZipArchive.data(named: "xl/workbook.xml", in: url)
-        let sheetName = firstSheetName(in: workbook) ?? "汇总"
+        return TableSchema(
+            sheetName: firstSheetName(in: workbook) ?? "汇总",
+            columns: header.filter { !$0.isEmpty }.map { TableColumn(name: $0, typeHint: typeHint(for: $0)) }
+        )
+    }
+
+    private static func readXLSXRows(from url: URL, preferredSheet: String) throws -> [[String]] {
+        let workbook = try ZipArchive.data(named: "xl/workbook.xml", in: url)
+        let sheetPath = sheetPath(preferred: preferredSheet, workbook: workbook, archive: url)
+            ?? "xl/worksheets/sheet1.xml"
         let sst = (try? ZipArchive.data(named: "xl/sharedStrings.xml", in: url))
             .map(sharedStrings) ?? []
-        let sheet = try ZipArchive.data(named: "xl/worksheets/sheet1.xml", in: url)
-        let header = headerRow(in: sheet, sharedStrings: sst)
-        return TableSchema(
-            sheetName: sheetName,
-            columns: header.map { TableColumn(name: $0, typeHint: typeHint(for: $0)) }
+        let sheet = try ZipArchive.data(named: sheetPath, in: url)
+        return allRows(in: sheet, sharedStrings: sst)
+    }
+
+    private static func sheetPath(preferred: String, workbook: Data, archive url: URL) -> String? {
+        guard let xml = String(data: workbook, encoding: .utf8) else { return nil }
+        let rels = (try? ZipArchive.data(named: "xl/_rels/workbook.xml.rels", in: url))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        let sheetPattern = try? NSRegularExpression(pattern: #"<sheet\b[^>]*name="([^"]+)"[^>]*r:id="([^"]+)""#)
+        let altPattern = try? NSRegularExpression(pattern: #"<sheet\b[^>]*r:id="([^"]+)"[^>]*name="([^"]+)""#)
+        var nameToRid: [(String, String)] = []
+        let ns = NSRange(xml.startIndex..<xml.endIndex, in: xml)
+        sheetPattern?.enumerateMatches(in: xml, range: ns) { match, _, _ in
+            guard let match,
+                  let n = Range(match.range(at: 1), in: xml),
+                  let r = Range(match.range(at: 2), in: xml) else { return }
+            nameToRid.append((String(xml[n]), String(xml[r])))
+        }
+        if nameToRid.isEmpty {
+            altPattern?.enumerateMatches(in: xml, range: ns) { match, _, _ in
+                guard let match,
+                      let r = Range(match.range(at: 1), in: xml),
+                      let n = Range(match.range(at: 2), in: xml) else { return }
+                nameToRid.append((String(xml[n]), String(xml[r])))
+            }
+        }
+        let rid = nameToRid.first(where: { $0.0.contains(preferred) })?.1 ?? nameToRid.first?.1
+        guard let rid else { return nil }
+        let relPattern = try? NSRegularExpression(
+            pattern: #"Id="\#(NSRegularExpression.escapedPattern(for: rid))"[^>]*Target="([^"]+)""#
         )
+        let relNS = NSRange(rels.startIndex..<rels.endIndex, in: rels)
+        if let match = relPattern?.firstMatch(in: rels, range: relNS),
+           let range = Range(match.range(at: 1), in: rels) {
+            let target = String(rels[range])
+            return target.hasPrefix("xl/") ? target : "xl/" + target.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        }
+        return "xl/worksheets/sheet1.xml"
     }
 
     private static func firstSheetName(in workbook: Data) -> String? {
@@ -92,7 +142,7 @@ enum OfficeDocument {
         return values
     }
 
-    private static func headerRow(in sheet: Data, sharedStrings: [String]) -> [String] {
+    private static func allRows(in sheet: Data, sharedStrings: [String]) -> [[String]] {
         guard let xml = String(data: sheet, encoding: .utf8) else { return [] }
         let rowPattern = try? NSRegularExpression(pattern: #"<row\b[^>]*>(.*?)</row>"#, options: .dotMatchesLineSeparators)
         let cellPattern = try? NSRegularExpression(pattern: #"<c\b([^>]*)>(.*?)</c>"#, options: .dotMatchesLineSeparators)
@@ -116,10 +166,7 @@ enum OfficeDocument {
                 rows.append(cells)
             }
         }
-        if let header = rows.first(where: { $0.contains(where: { $0.contains("序号") || $0.contains("月份") }) }) {
-            return header.filter { !$0.isEmpty }
-        }
-        return rows.first { $0.contains(where: { !$0.isEmpty }) } ?? []
+        return rows
     }
 
     private static func cellValue(attrs: String, inner: String, sharedStrings: [String]) -> String {

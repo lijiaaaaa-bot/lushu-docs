@@ -96,9 +96,9 @@ struct DeepSeekResponse: Codable {
 
 enum GroundedLLM {
     static let systemPrompt = """
-    你是律书的撰稿助手，不是通用闲聊。只能复述用户已写要点和已提供的结构化材料。
-    禁止编造法条、金额、电价P、全场灯数N、未出现的年份数据。
-    缺口必须原样保留。不得新增 LegalCitation。思考链关闭，只给正文。
+    你是律书的撰稿助手，不是通用闲聊。只能复述用户已写要点、已锁定真表读数，以及由这些数字算出的电费/停车费。
+    禁止编造法条、未出现的合同条号、未读出的年份金额、未写明的电价P或灯数N。
+    已测算数字必须原样保留。不得新增 LegalCitation。思考链关闭，只给正文。
     """
 
     static func replyMessages(card: BriefCard, grounded: String) -> [DeepSeekChatMessage] {
@@ -125,7 +125,7 @@ enum GroundedLLM {
             DeepSeekChatMessage(
                 role: "user",
                 content: """
-                只改措辞，保留全部已写事实、文件名、缺口原句。不要补数字或法条。
+                只改函件措辞，保留全部已写事实、真表金额、测算公式与缺口原句。不要补数字或未粘贴的合同条号。
                 按原章节标题输出 Markdown。
 
                 \(draft.markdown)

@@ -1,7 +1,7 @@
 import Foundation
 
 /// 文书生成只接受 StructuredCaseInputs。引用必须先过 LegalCorpus.validate。
-/// 任务卡只决定章节与口径，不得让对话编造法条或台账数字。
+/// 测算报告读真表金额与测算原文；不得把材料清单当成报告正文，也不得编造未读出的行金额或合同条号。
 struct DocumentGenerator {
     var corpus: LegalCorpus = .empty
 
@@ -21,6 +21,9 @@ struct DocumentGenerator {
             return summary(from: inputs)
         case .customReport:
             let card = brief ?? BriefCard(caseID: UUID(), documentPurpose: "专项报告")
+            if FeeReportBuilder.isFeeReport(brief: card, kind: .customReport) {
+                return FeeReportBuilder.build(inputs: inputs, brief: card)
+            }
             return briefDriven(kind: .customReport, inputs: inputs, brief: card)
         case .complaint, .answer:
             throw DocumentGenerationError.unstructuredInputsRejected
@@ -238,10 +241,13 @@ struct DocumentGenerator {
     }
 
     private func sectionKey(_ heading: String) -> String {
+        if heading.contains("电费") { return "电费" }
         if heading.contains("停车") { return "停车" }
-        if heading.contains("照明") || heading.contains("用电") || heading.contains("电费") { return "照明" }
+        if heading.contains("照明") || heading.contains("用电") { return "照明" }
         if heading.contains("计算") { return "计算" }
         if heading.contains("缺口") || heading.contains("待补") || heading.contains("待办") { return "缺口" }
+        if heading.contains("测算依据") { return "测算依据" }
+        if heading.contains("测算结论") { return "测算结论" }
         if heading.contains("立场") || heading.contains("范围") || heading.contains("概要") { return "立场" }
         if heading.contains("清单") { return "清单" }
         if heading.contains("事实") { return "事实" }

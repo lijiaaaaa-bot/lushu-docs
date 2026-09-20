@@ -244,7 +244,7 @@ struct HomeDocumentPage: View {
                 .font(Theme.screenTitle(18))
                 .foregroundStyle(Theme.ink)
                 .fixedSize(horizontal: false, vertical: true)
-            ForEach(draft.chatPreviewSections.prefix(4)) { section in
+            ForEach(draft.chatPreviewSections.prefix(5)) { section in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(section.heading)
                         .font(Theme.screenTitle(14))

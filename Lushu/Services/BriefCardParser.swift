@@ -152,6 +152,9 @@ enum BriefCardParser {
         if let labeled = labeledBlock(in: text, headings: ["文书目的", "目的"]) {
             return firstSentence(labeled)
         }
+        if text.contains("电费及职工停车费") || text.contains("测算的报告") {
+            return "停车场电费及职工停车费测算报告"
+        }
         if text.contains("专项报告") { return "停车场费用专项报告" }
         if text.contains("材料总结") { return "材料总结" }
         if text.contains("报告") { return "费用报告" }
@@ -187,7 +190,7 @@ enum BriefCardParser {
             if !cleaned.isEmpty { return cleaned }
         }
         var found: [String] = []
-        let candidates = ["立场与范围", "停车费", "照明用电测算", "计算口径", "待补材料", "案件概要", "事实要点"]
+        let candidates = ["测算依据", "停车场电费", "职工停车费", "测算结论", "立场与范围", "停车费", "照明用电测算", "计算口径", "待补材料", "案件概要", "事实要点"]
         for item in candidates where text.contains(item) {
             found.append(item)
         }
@@ -218,7 +221,8 @@ enum BriefCardParser {
         let countGiven = statedNumber(in: text, labels: ["全场灯数N", "全场灯数", "灯数N"]) != nil
         let missingCue = text.contains("没有") || text.contains("未给") || text.contains("缺") || text.contains("未知")
 
-        if mentionsPrice && (!priceGiven || missingCue && text.contains("电价")) {
+        let hasReferencePrice = text.contains("参考电价") && statedNumber(in: text, labels: ["参考电价P", "参考电价", "电价P", "电价"]) != nil
+        if mentionsPrice && !hasReferencePrice && (!priceGiven || missingCue && text.contains("电价")) {
             if !priceGiven { gaps.append("电价P") }
         }
         if mentionsCount && (!countGiven || missingCue && (text.contains("灯数") || text.contains("全场"))) {

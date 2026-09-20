@@ -12,15 +12,14 @@ final class BriefCardTests: XCTestCase {
         XCTAssertTrue(card.yearsScope.contains("2018"))
         XCTAssertTrue(card.yearsScope.contains("2026"))
         XCTAssertTrue(card.requiredSections.contains(where: { $0.contains("停车") }))
-        XCTAssertTrue(card.requiredSections.contains(where: { $0.contains("照明") }))
-        XCTAssertTrue(card.missingFacts.contains("电价P"))
-        XCTAssertTrue(card.missingFacts.contains("全场灯数N"))
+        XCTAssertTrue(card.requiredSections.contains(where: { $0.contains("电费") }))
+        XCTAssertTrue(card.requiredSections.contains(where: { $0.contains("测算依据") }))
+        XCTAssertFalse(card.missingFacts.contains("电价P"))
+        XCTAssertFalse(card.missingFacts.contains("全场灯数N"))
         XCTAssertFalse(card.calculationRules.isEmpty)
         XCTAssertTrue(card.chips.contains("乙方"))
-        XCTAssertTrue(card.chips.contains(where: { $0.contains("电价P") }))
-        XCTAssertEqual(card.requiredSections.filter { $0.contains("停车") }.count, 1)
-        XCTAssertEqual(card.requiredSections.filter { $0.contains("计算") }.count, 1)
-        XCTAssertEqual(card.requiredSections.count, 5)
+        XCTAssertEqual(card.requiredSections.filter { $0.contains("职工停车") }.count, 1)
+        XCTAssertEqual(card.requiredSections.count, 4)
         XCTAssertFalse(card.requiredSections.contains(where: { $0.contains("以下") }))
         XCTAssertFalse(card.requiredSections.contains(where: { $0.count > 24 }))
         let preview = BriefCardParser.shortUserPreview(SampleCaseLoader.embeddedExampleBrief, card: card)
@@ -45,15 +44,12 @@ final class BriefCardTests: XCTestCase {
 
     func testGeneratorFillsFromStructuredDataAndListsGaps() throws {
         let brief = BriefCardParser.parse(SampleCaseLoader.embeddedExampleBrief, caseID: UUID())
-        let lighting = "负一层 西直梯电房 每个灯6.21瓦"
+        let lighting = "负一层 西直梯电房  （13个灯）\n每个灯6.21瓦\n后勤保障部确认签字"
         let inputs = StructuredCaseInputs(
             caseTitle: "海天×阜外停车场费用材料",
             metadata: [:],
             tables: [
                 tableRef("2022年1月份到12月份阜外医院职工停车信息表.xlsx"),
-                tableRef("2023年1月份到12月份阜外医院职工停车信息表.xlsx"),
-                tableRef("2024年1月份到12月份阜外医院职工停车信息表.xlsx"),
-                tableRef("2025年1月份到12月份阜外医院职工停车信息表.xlsx"),
                 tableRef("2026年1月份到12月份阜外医院职工停车信息表.xlsx")
             ],
             texts: [
@@ -73,22 +69,20 @@ final class BriefCardTests: XCTestCase {
 
         let draft = try DocumentGenerator().generate(kind: .customReport, inputs: inputs, brief: brief)
         let body = draft.sections.map(\.body).joined(separator: "\n")
+        let headings = draft.sections.map(\.heading)
 
-        XCTAssertTrue(draft.title.contains("海天"))
+        XCTAssertTrue(draft.title.contains("测算"))
+        XCTAssertTrue(headings.contains(where: { $0.contains("测算依据") }))
+        XCTAssertTrue(headings.contains(where: { $0.contains("停车场电费") }))
+        XCTAssertTrue(headings.contains(where: { $0.contains("职工停车费") }))
+        XCTAssertTrue(headings.contains(where: { $0.contains("测算结论") }))
         XCTAssertTrue(body.contains("乙方"))
-        XCTAssertTrue(body.contains("2022年"))
         XCTAssertTrue(body.contains("6.21瓦"))
-        XCTAssertTrue(body.contains("电价P"))
-        XCTAssertTrue(body.contains("全场灯数N"))
         XCTAssertTrue(body.contains("2018年停车信息表"))
         XCTAssertFalse(body.contains("根据刑法"))
         XCTAssertFalse(body.contains("0.85元"))
         XCTAssertFalse(body.contains("行业经验"))
-
-        let headings = draft.sections.map(\.heading)
-        XCTAssertEqual(headings.filter { $0.contains("停车") }.count, 1)
-        XCTAssertEqual(headings.filter { $0.contains("计算") }.count, 1)
-        XCTAssertEqual(headings.filter { $0.contains("照明") || $0.contains("用电") }.count, 1)
+        XCTAssertFalse(body.contains("本稿不代算、不估数"))
     }
 
     func testDOCXExportContainsTitleNotInventedStatutes() throws {
@@ -235,7 +229,8 @@ final class BriefCardTests: XCTestCase {
         XCTAssertTrue(file.contains("乙方"))
         XCTAssertTrue(file.contains("2018"))
         XCTAssertTrue(file.contains("电价P"))
-        XCTAssertTrue(file.contains("全场灯数N"))
+        XCTAssertTrue(file.contains("0.65"))
+        XCTAssertTrue(file.contains("第九条第七款"))
     }
 
     private func tableRef(_ filename: String) -> StructuredTableRef {

@@ -55,7 +55,7 @@ CasePack/
 - 未挂案件：要点暂存在 `homeInbox`；回执要求「选材料文件夹」或「载入示例案件」。
 - 挂上 CasePack 后，inbox 并入该案。回执确认真表 / 已定位文本，并解析 `BriefCard`。
 - 材料 + 任务卡齐全后，「生成文书」本地落稿。首页在奶油纸色上展开稿面预览（跳过材料清单、不贴真表单元格）+ 近全宽下载卡（`home.download`），并给出 2–3 条「相关问题」。**不**自动抢进三栏。
-- `DocumentGenerator.generate(kind:inputs:brief:)` 只填结构化材料。缺 电价P、全场灯数N、某年停车表 → 写缺口，不估数。
+- `DocumentGenerator.generate(kind:inputs:brief:)` 只填结构化材料。乙方电费+停车费测算报告走函件体：读汇总页年度金额、测算表分区功率；参考电价P与灯数N仅在任务卡写明时计算，并标注「以双方确认为准」。缺年不编行金额。合同条号只转写任务卡已粘贴原文。金标准摘录见 `docs/fixtures/haitian-parking-gold-report.md`。
 - 可选 DeepSeek（BYOK）：钥匙串有密钥时，回执/润色走 OpenAI 兼容 `chat/completions`（`deepseek-chat`，思考链关闭）。无密钥时本地解析与落稿仍可用，提示去设置，不造假回复。
 - 不是通用闲聊：只服务材料总结 / 专项报告。起诉状 / 答辩状仍为禁用占位，本轮不发明第二套首页。
 
