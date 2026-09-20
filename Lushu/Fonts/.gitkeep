@@ -1,0 +1,2 @@
+# Drop NotoSerifSC-Black.otf and NotoSerifSC-Bold.otf here (same files as Anxia).
+# ATSApplicationFontsPath = Fonts. Theme.swift probes these PostScript names first.

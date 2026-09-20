@@ -10,6 +10,8 @@
 	<string>律书</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
+	<key>ATSApplicationFontsPath</key>
+	<string>Fonts</string>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>律书需要读取你选择的案匣或案件文件夹，以便列出材料并生成文书。</string>
 	<key>NSDesktopFolderUsageDescription</key>

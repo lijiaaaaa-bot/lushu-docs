@@ -1,13 +1,20 @@
 import Combine
 import SwiftUI
 
+enum WorkspaceFocus: String, Hashable {
+    case materials
+    case manuscript
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var sources: [CaseSource] = []
     @Published var selectedSourceID: CaseSource.ID?
-    @Published var stage: WorkspaceStage = .materials
+    @Published var selectedMaterialID: MaterialItem.ID?
     @Published var selectedKind: DocumentKind = .summary
     @Published var drafts: [UUID: DraftDocument] = [:]
+    @Published var searchText: String = ""
+    @Published var focus: WorkspaceFocus = .materials
     @Published var showOnboarding: Bool = true
     @Published var showExportSheet: Bool = false
     @Published var showSettings: Bool = false
@@ -27,10 +34,32 @@ final class AppState: ObservableObject {
         return drafts[id] ?? DraftDocument.blankSummary(caseTitle: selectedSource?.title ?? "未选择案件")
     }
 
+    var visibleSources: [CaseSource] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return sources }
+        return sources.filter {
+            $0.title.localizedCaseInsensitiveContains(query)
+                || $0.locationCaption.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    var visibleMaterials: [MaterialItem] {
+        guard let source = selectedSource else { return [] }
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return source.materials }
+        return source.materials.filter {
+            $0.filename.localizedCaseInsensitiveContains(query)
+                || $0.relativePath.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    var unfiledMaterials: [MaterialItem] { visibleMaterials.filter { !$0.included } }
+    var filedMaterials: [MaterialItem] { visibleMaterials.filter(\.included) }
+
     init(
         seedSamples: Bool = false,
         seedDrafts: Bool = false,
-        seedStage: WorkspaceStage = .materials
+        seedFocus: WorkspaceFocus = .materials
     ) {
         if seedSamples {
             loadSamples()
@@ -41,7 +70,7 @@ final class AppState: ObservableObject {
             }
         }
         if seedSamples {
-            stage = seedStage
+            focus = seedFocus
         }
     }
 
@@ -50,34 +79,34 @@ final class AppState: ObservableObject {
         sources = samples
         selectedSourceID = samples.first?.id
         showOnboarding = false
+        focus = .materials
         for sample in samples {
             drafts[sample.id] = DraftDocument.blankSummary(caseTitle: sample.title)
         }
     }
 
     func chooseAnxiaFolder() {
-        // UI-first：系统选档 + security-scoped bookmark 下一轮接入。
-        ingestDemoSource(SampleData.laborDispute(), note: "已载入案匣示例案件。真实文件夹授权将在下一轮接入。")
+        ingestDemoSource(SampleData.laborDispute(), note: "已载入案匣示例。真实选文件夹与书签下一轮接入。")
     }
 
     func importFiles() {
         ingestDemoSource(
             rewritten(SampleData.houseContract(), origin: .importedFiles, caption: "导入 · 所选文件"),
-            note: "已载入导入文件示例。系统多选文件将在下一轮接入。"
+            note: "已载入导入文件示例。系统多选下一轮接入。"
         )
     }
 
     func importFolder() {
         ingestDemoSource(
             SampleData.houseContract(),
-            note: "已载入导入文件夹示例。系统选文件夹将在下一轮接入。"
+            note: "已载入导入文件夹示例。系统选文件夹下一轮接入。"
         )
     }
 
     func selectSource(_ id: CaseSource.ID) {
         selectedSourceID = id
-        stage = .materials
-        selectedKind = .summary
+        selectedMaterialID = nil
+        focus = .materials
         if drafts[id] == nil, let source = sources.first(where: { $0.id == id }) {
             drafts[id] = DraftDocument.blankSummary(caseTitle: source.title)
         }
@@ -88,19 +117,12 @@ final class AppState: ObservableObject {
         drafts[id] = nil
         if selectedSourceID == id {
             selectedSourceID = sources.first?.id
+            selectedMaterialID = nil
         }
         if sources.isEmpty {
             showOnboarding = true
-            stage = .materials
+            focus = .materials
         }
-    }
-
-    func setStage(_ next: WorkspaceStage) {
-        if next == .draft, !selectedKind.isAvailable {
-            flash("「\(selectedKind.title)」尚未开放生稿，请先使用材料总结。")
-            selectedKind = .summary
-        }
-        stage = next
     }
 
     func chooseKind(_ kind: DocumentKind) {
@@ -109,6 +131,34 @@ final class AppState: ObservableObject {
             return
         }
         flash("「\(kind.title)」为后续文书类型，本轮仅开放材料总结。")
+    }
+
+    func pickMaterials() {
+        focus = .materials
+        if sources.isEmpty {
+            showOnboarding = true
+        }
+    }
+
+    func composeDocument() {
+        guard selectedSource != nil else {
+            flash("请先选材料。")
+            pickMaterials()
+            return
+        }
+        if !selectedKind.isAvailable {
+            flash("「\(selectedKind.title)」尚未开放生稿。")
+            selectedKind = .summary
+        }
+        generateLocalSummary()
+    }
+
+    func exportDocument() {
+        if currentDraft.isBlank {
+            flash("请先成文书，再导出。")
+            return
+        }
+        showExportSheet = true
     }
 
     func generateLocalSummary() {
@@ -122,7 +172,7 @@ final class AppState: ObservableObject {
             drafts[source.id] = SampleData.summary(for: source)
             isGenerating = false
             previewMode = true
-            stage = .draft
+            focus = .manuscript
             flash("已生成本地摘要。PDF / DOCX 解析与大模型润色稍后接入。")
         }
     }
@@ -130,11 +180,6 @@ final class AppState: ObservableObject {
     func requestLLMPolish() {
         flash("大模型润色将读取钥匙串中的密钥。本轮不接线，本地摘要仍可用。")
         showSettings = true
-    }
-
-    func updateDraft(_ draft: DraftDocument) {
-        guard let id = selectedSourceID else { return }
-        drafts[id] = draft
     }
 
     func updateSection(id: DraftSection.ID, body: String) {
@@ -162,7 +207,8 @@ final class AppState: ObservableObject {
         sources.insert(incoming, at: 0)
         drafts[incoming.id] = DraftDocument.blankSummary(caseTitle: incoming.title)
         selectedSourceID = incoming.id
-        stage = .materials
+        selectedMaterialID = nil
+        focus = .materials
         showOnboarding = false
         flash(note)
     }

@@ -5,145 +5,157 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            brand
-            Divider().overlay(LushuTheme.hairline)
-            sourceList
-            Divider().overlay(LushuTheme.hairline)
-            footer
+            header
+            ThinSearchField(placeholder: "检索来源或材料", text: $appState.searchText)
+                .padding(.horizontal, Theme.pagePad)
+                .padding(.bottom, 16)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    sourceSection
+                    kindSection
+                }
+                .padding(.horizontal, Theme.pagePad)
+                .padding(.bottom, 12)
+            }
+            if appState.showUIFirstBanner {
+                UIFirstNote { appState.showUIFirstBanner = false }
+            }
+            DotActionBar(
+                onPick: { appState.pickMaterials() },
+                onCompose: { appState.composeDocument() },
+                onExport: { appState.exportDocument() },
+                composeEnabled: appState.selectedSource != nil,
+                exportEnabled: !appState.currentDraft.isBlank
+            )
+            .padding(.horizontal, Theme.pagePad)
+            .padding(.vertical, 16)
         }
-        .background(LushuTheme.paper)
+        .background(Theme.paper)
+        .navigationTitle("")
     }
 
-    private var brand: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("LUSHU")
-                .font(LushuType.eyebrow())
-                .foregroundStyle(LushuTheme.gold)
-                .tracking(1.4)
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
             Text("律书")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(LushuTheme.ink)
-            Text("文书生成")
-                .font(LushuType.caption())
-                .foregroundStyle(LushuTheme.softInk)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var sourceList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("案件来源")
-                    .font(LushuType.caption())
-                    .foregroundStyle(LushuTheme.softInk)
+                .font(Theme.brandTitle(36))
+                .foregroundStyle(Theme.ink)
+            HStack(alignment: .firstTextBaseline) {
+                Text("从材料到文书")
+                    .font(Theme.serifBody(13))
+                    .foregroundStyle(Theme.mute)
                 Spacer()
-                Menu {
-                    Button("选择案匣文件夹…") { appState.chooseAnxiaFolder() }
-                    Button("导入文件…") { appState.importFiles() }
-                    Button("导入文件夹…") { appState.importFolder() }
-                    Divider()
-                    Button("重新打开引导") { appState.showOnboarding = true }
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(LushuTheme.ink)
-                }
-                .menuStyle(.borderlessButton)
-                .frame(width: 20, height: 20)
-                .help("添加来源")
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 6)
-
-            if appState.sources.isEmpty {
-                Text("尚无来源。请选择案匣文件夹或导入材料。")
-                    .font(LushuType.caption())
-                    .foregroundStyle(LushuTheme.softInk)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 2) {
-                        ForEach(appState.sources) { source in
-                            SourceRow(
-                                source: source,
-                                selected: source.id == appState.selectedSourceID
-                            )
-                            .onTapGesture { appState.selectSource(source.id) }
-                            .contextMenu {
-                                Button("显示材料") {
-                                    appState.selectSource(source.id)
-                                    appState.setStage(.materials)
-                                }
-                                Button("删除来源", role: .destructive) {
-                                    appState.removeSource(source.id)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 12)
-                }
+                Button("设置") { appState.showSettings = true }
+                    .buttonStyle(.plain)
+                    .font(Theme.caption(11))
+                    .foregroundStyle(Theme.mute)
             }
         }
-        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, Theme.pagePad)
+        .padding(.top, 18)
+        .padding(.bottom, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var footer: some View {
+    private var sourceSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button {
-                appState.showSettings = true
-            } label: {
-                Label("设置", systemImage: "gearshape")
-                    .font(LushuType.body())
-                    .foregroundStyle(LushuTheme.softInk)
+            sectionLabel("来源")
+            ForEach(appState.visibleSources) { source in
+                SourceDrawerCard(
+                    source: source,
+                    selected: source.id == appState.selectedSourceID
+                )
+                .onTapGesture { appState.selectSource(source.id) }
+                .contextMenu {
+                    Button("显示材料") { appState.selectSource(source.id) }
+                    Button("删除来源", role: .destructive) { appState.removeSource(source.id) }
+                }
             }
-            .buttonStyle(.plain)
-            Text("与案匣同族 · 不代写法条")
-                .font(LushuType.caption())
-                .foregroundStyle(LushuTheme.softInk.opacity(0.8))
+            if appState.visibleSources.isEmpty {
+                Text(appState.sources.isEmpty ? "尚未接入案匣或导入。" : "无匹配来源。")
+                    .font(Theme.serifBody(13))
+                    .foregroundStyle(Theme.mute)
+                    .padding(.vertical, 4)
+            }
+            HStack(spacing: 10) {
+                SerifTextButton(title: "案匣文件夹") { appState.chooseAnxiaFolder() }
+                Text("·")
+                    .foregroundStyle(Theme.mute)
+                    .accessibilityHidden(true)
+                SerifTextButton(title: "导入") { appState.importFolder() }
+            }
+            .padding(.top, 2)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var kindSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionLabel("文书")
+            ForEach(DocumentKind.allCases) { kind in
+                DocumentKindDrawerCard(
+                    kind: kind,
+                    selected: appState.selectedKind == kind
+                )
+                .onTapGesture { appState.chooseKind(kind) }
+            }
+        }
+    }
+
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(Theme.caption(11))
+            .foregroundStyle(Theme.mute)
+            .tracking(0.6)
     }
 }
 
-struct SourceRow: View {
+struct SourceDrawerCard: View {
     let source: CaseSource
     let selected: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: source.origin.symbolName)
-                .font(.system(size: 12))
-                .foregroundStyle(selected ? LushuTheme.ink : LushuTheme.softInk)
-                .frame(width: 16)
-                .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
                 Text(source.title)
-                    .font(.system(size: 12.5, weight: selected ? .semibold : .regular))
-                    .foregroundStyle(LushuTheme.ink)
+                    .font(Theme.screenTitle(15))
+                    .foregroundStyle(Theme.ink)
                     .lineLimit(2)
-                Text(source.displaySubtitle)
-                    .font(LushuType.caption())
-                    .foregroundStyle(LushuTheme.softInk)
+                Spacer(minLength: 6)
+                if source.isSample {
+                    ThemeBadge(text: "示例", outlined: true)
+                }
+            }
+            Text(source.displaySubtitle)
+                .font(Theme.serifBody(12))
+                .foregroundStyle(Theme.mute)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .themeCard(emphasized: selected, outlined: false)
+        .contentShape(Rectangle())
+    }
+}
+
+struct DocumentKindDrawerCard: View {
+    let kind: DocumentKind
+    let selected: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(kind.title)
+                    .font(Theme.screenTitle(15))
+                    .foregroundStyle(kind.isAvailable ? Theme.ink : Theme.mute)
+                Text(kind.isAvailable ? "当前可撰" : "筹备中")
+                    .font(Theme.serifBody(12))
+                    .foregroundStyle(Theme.mute)
             }
             Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(selected ? LushuTheme.sky : Color.clear)
-        .overlay(alignment: .leading) {
-            if selected {
-                Rectangle()
-                    .fill(LushuTheme.gold)
-                    .frame(width: 2)
+            if !kind.isAvailable {
+                ThemeBadge(text: "未开", outlined: true)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .themeCard(emphasized: selected && kind.isAvailable, outlined: !kind.isAvailable)
+        .opacity(kind.isAvailable ? 1 : 0.72)
         .contentShape(Rectangle())
     }
 }

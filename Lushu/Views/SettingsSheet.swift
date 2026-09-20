@@ -8,56 +8,72 @@ struct SettingsSheet: View {
     @State private var apiKey = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("SETTINGS")
-                    .font(LushuType.eyebrow())
-                    .foregroundStyle(LushuTheme.gold)
-                    .tracking(1.2)
-                Text("设置")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(LushuTheme.ink)
-                Text("密钥只应写入钥匙串，不得提交到仓库。")
-                    .font(LushuType.body())
-                    .foregroundStyle(LushuTheme.softInk)
-            }
-            .padding(20)
+        VStack(alignment: .leading, spacing: 18) {
+            Text("设置")
+                .font(Theme.brandTitle(28))
+                .foregroundStyle(Theme.ink)
+            Text("密钥只应写入钥匙串，不得提交到仓库。")
+                .font(Theme.serifBody(14))
+                .foregroundStyle(Theme.mute)
 
-            Divider().overlay(LushuTheme.hairline)
-
-            Form {
-                Section("本地摘要") {
-                    LabeledContent("状态") {
-                        Text("始终可用，无需密钥")
-                            .foregroundStyle(LushuTheme.softInk)
-                    }
-                }
-                Section("大模型（可选）") {
-                    Toggle("启用大模型润色", isOn: $useLLM)
-                    TextField("接口地址", text: $endpoint)
-                    SecureField("API Key（将存入钥匙串）", text: $apiKey)
-                    Text("本轮不接线、不写入钥匙串。字段仅用于确认设置界面完整。")
-                        .font(LushuType.caption())
-                        .foregroundStyle(LushuTheme.softInk)
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("本地摘要")
+                    .font(Theme.screenTitle(16))
+                    .foregroundStyle(Theme.ink)
+                Text("始终可用，无需密钥。")
+                    .font(Theme.serifBody(13))
+                    .foregroundStyle(Theme.mute)
             }
-            .formStyle(.grouped)
-            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .themeCard()
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("大模型（可选）")
+                    .font(Theme.screenTitle(16))
+                    .foregroundStyle(Theme.ink)
+                Toggle(isOn: $useLLM) {
+                    Text("启用润色")
+                        .font(Theme.serifBody(14))
+                        .foregroundStyle(Theme.ink)
+                }
+                .tint(Theme.brass)
+                TextField("接口地址", text: $endpoint)
+                    .textFieldStyle(.plain)
+                    .font(Theme.serifBody(13))
+                    .padding(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
+                    )
+                SecureField("API Key（将存入钥匙串）", text: $apiKey)
+                    .textFieldStyle(.plain)
+                    .font(Theme.serifBody(13))
+                    .padding(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Theme.walnut.opacity(0.22), lineWidth: 1)
+                    )
+                Text("本轮不接线、不写入钥匙串。")
+                    .font(Theme.caption(11))
+                    .foregroundStyle(Theme.mute)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .themeCard()
 
             HStack {
                 Spacer()
-                Button("完成") {
+                SerifTextButton(title: "完成") {
                     if useLLM || !apiKey.isEmpty {
-                        appState.flash("设置已保留在界面。钥匙串写入与请求下一轮接入，密钥不会写入项目文件。")
+                        appState.flash("设置留在界面。钥匙串与请求下一轮接入。")
                     }
                     dismiss()
                 }
-                .keyboardShortcut(.defaultAction)
             }
-            .padding(16)
         }
-        .frame(width: 520, height: 420)
-        .background(LushuTheme.paper)
+        .padding(Theme.pagePad)
+        .frame(width: 520, height: 460)
+        .background(Theme.paper)
+        .tint(Theme.walnut)
     }
 }
 

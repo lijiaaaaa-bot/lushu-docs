@@ -8,31 +8,27 @@ struct LushuApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
-                .frame(minWidth: 1080, minHeight: 700)
+                .frame(minWidth: 1100, minHeight: 720)
         }
-        .defaultSize(width: 1280, height: 820)
+        .defaultSize(width: 1320, height: 840)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("选择案匣文件夹…") { appState.chooseAnxiaFolder() }
+                Button("选材料…") { appState.pickMaterials(); appState.chooseAnxiaFolder() }
                     .keyboardShortcut("o", modifiers: [.command])
                 Button("导入文件…") { appState.importFiles() }
                 Button("导入文件夹…") { appState.importFolder() }
                 Divider()
-                Button("导出文书…") { appState.showExportSheet = true }
+                Button("导出…") { appState.exportDocument() }
                     .keyboardShortcut("e", modifiers: [.command])
-                    .disabled(appState.selectedSource == nil || appState.currentDraft.isBlank)
+                    .disabled(appState.currentDraft.isBlank)
             }
-            CommandMenu("撰稿") {
-                Button("材料") { appState.setStage(.materials) }
+            CommandMenu("律书") {
+                Button("选材料") { appState.pickMaterials() }
                     .keyboardShortcut("1", modifiers: [.command])
-                Button("文书类型") { appState.setStage(.documentKind) }
+                Button("成文书") { appState.composeDocument() }
                     .keyboardShortcut("2", modifiers: [.command])
-                Button("撰稿") { appState.setStage(.draft) }
+                Button("导出") { appState.exportDocument() }
                     .keyboardShortcut("3", modifiers: [.command])
-                Divider()
-                Button("生成本地摘要") { appState.generateLocalSummary() }
-                    .keyboardShortcut("g", modifiers: [.command])
-                    .disabled(appState.selectedSource == nil)
             }
             CommandGroup(replacing: .appSettings) {
                 Button("设置…") { appState.showSettings = true }
@@ -44,7 +40,7 @@ struct LushuApp: App {
         Settings {
             SettingsSheet()
                 .environmentObject(appState)
-                .frame(width: 480, height: 360)
+                .frame(width: 520, height: 460)
         }
         #endif
     }

@@ -28,89 +28,65 @@ struct ExportSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header
-            Divider().overlay(LushuTheme.hairline)
-            content
-            Divider().overlay(LushuTheme.hairline)
-            footer
-        }
-        .frame(width: 640, height: 520)
-        .background(LushuTheme.paper)
-    }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("导出")
+                    .font(Theme.brandTitle(28))
+                    .foregroundStyle(Theme.ink)
+                Text(appState.currentDraft.title)
+                    .font(Theme.serifBody(14))
+                    .foregroundStyle(Theme.mute)
+            }
+            .padding(Theme.pagePad)
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("EXPORT")
-                .font(LushuType.eyebrow())
-                .foregroundStyle(LushuTheme.gold)
-                .tracking(1.2)
-            Text("导出文书")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(LushuTheme.ink)
-            Text(appState.currentDraft.title)
-                .font(LushuType.body())
-                .foregroundStyle(LushuTheme.softInk)
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 18) {
-                Text("格式")
-                    .font(LushuType.body())
-                    .foregroundStyle(LushuTheme.softInk)
+            HStack(spacing: 16) {
                 ForEach(ExportFormat.allCases) { item in
                     Button {
                         format = item
                     } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: format == item ? "largecircle.fill.circle" : "circle")
-                                .foregroundStyle(LushuTheme.ink)
-                            Text(item.title)
-                                .foregroundStyle(LushuTheme.ink)
-                        }
-                        .font(LushuType.body())
+                        Text(item.title)
+                            .font(Theme.screenTitle(15))
+                            .foregroundStyle(format == item ? Theme.walnut : Theme.mute)
                     }
                     .buttonStyle(.plain)
                 }
             }
-
-            Text("预览")
-                .font(LushuType.caption())
-                .foregroundStyle(LushuTheme.softInk)
+            .padding(.horizontal, Theme.pagePad)
+            .padding(.bottom, 12)
 
             ScrollView {
                 Text(exportBody)
-                    .font(LushuType.mono())
-                    .foregroundStyle(LushuTheme.ink)
+                    .font(Theme.serifBody(13))
+                    .foregroundStyle(Theme.ink)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(10)
-            .background(LushuTheme.sky)
+            .padding(14)
+            .background(Theme.card)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .stroke(LushuTheme.line, lineWidth: 1)
+                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                    .stroke(Theme.walnutStroke, lineWidth: 1)
             )
-        }
-        .padding(20)
-    }
+            .padding(.horizontal, Theme.pagePad)
 
-    private var footer: some View {
-        HStack(spacing: 10) {
-            Button("写回案匣文件夹") {
-                appState.flash("写回案匣将使用已授权书签。本轮界面先行，未执行写入。")
-            }
-            .disabled(appState.currentDraft.isBlank)
-            Spacer()
-            Button("取消") { dismiss() }
-            Button("导出到文件…") { exportToFile() }
+            HStack {
+                SerifTextButton(title: "写回案匣") {
+                    appState.flash("写回案匣将使用已授权书签。本轮未执行写入。")
+                }
                 .disabled(appState.currentDraft.isBlank)
-                .keyboardShortcut(.defaultAction)
+                Spacer()
+                SerifTextButton(title: "取消") { dismiss() }
+                Text("·")
+                    .foregroundStyle(Theme.mute)
+                    .accessibilityHidden(true)
+                SerifTextButton(title: "导出到文件") { exportToFile() }
+                    .disabled(appState.currentDraft.isBlank)
+            }
+            .padding(Theme.pagePad)
         }
-        .padding(16)
+        .frame(width: 640, height: 520)
+        .background(Theme.paper)
+        .tint(Theme.walnut)
     }
 
     private var exportBody: String {
@@ -121,7 +97,6 @@ struct ExportSheet: View {
     }
 
     private func exportToFile() {
-        // UI-first：NSSavePanel 下一轮接入。
         let name = "\(appState.currentDraft.title).\(format.filenameExtension)"
         appState.flash("将保存为「\(name)」。系统保存面板下一轮接入。")
         dismiss()
